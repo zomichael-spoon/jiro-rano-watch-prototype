@@ -72,6 +72,7 @@ export interface ProviderOrganization {
 export interface Profile {
   id: string; // uuid, FK -> auth.users(id)
   display_name: string | null;
+  ville?: string | null;
   role: UserRole;
   activity_code: string | null;
   fokontany_id: string | null;
@@ -170,6 +171,7 @@ export interface FokontanyOption {
   name: string;
   lat: number;
   lng: number;
+  district?: string | null;
 }
 
 /** Profil enrichi de son activité et de son fokontany (pour l'écran d'accueil / conseils IA). */

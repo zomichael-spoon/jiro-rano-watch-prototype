@@ -23,11 +23,14 @@ export default function OnboardingScreen({
   const [name, setName] = useState("");
   const [role, setRole] = useState<UserRole>("citizen");
   const [activityCode, setActivityCode] = useState(activities[0]?.code ?? "");
+  const [ville, setVille] = useState<string>(fokontanyOptions[0]?.district ?? "");
   const [fokontanyId, setFokontanyId] = useState(fokontanyOptions[0]?.id ?? "");
   const [notes, setNotes] = useState("");
 
   const selectedFokontany = fokontanyOptions.find((f) => f.id === fokontanyId);
   const selectedActivity = activities.find((a) => a.code === activityCode);
+  const villes = Array.from(new Set(fokontanyOptions.map((f) => f.district).filter(Boolean as any))) as string[];
+  const fokontanyFiltered = ville ? fokontanyOptions.filter((f) => f.district === ville) : fokontanyOptions;
 
   function handleSubmit() {
     if (!name.trim()) return;
@@ -36,6 +39,7 @@ export default function OnboardingScreen({
       display_name: name.trim(),
       role,
       activity_code: activityCode || null,
+      ville: ville || null,
       fokontany_id: fokontanyId || null,
       notes: notes.trim() || null,
       organization_name: null,
@@ -136,6 +140,25 @@ export default function OnboardingScreen({
 
         <div>
           <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1.5">
+            Ville
+          </label>
+          <select
+            className="w-full rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-foreground appearance-none focus:outline-none focus:ring-2 focus:ring-primary/50 mb-2"
+            value={ville}
+            onChange={(e) => {
+              setVille(e.target.value);
+              setFokontanyId("");
+            }}
+          >
+            <option value="">— Choisir une ville —</option>
+            {villes.map((v) => (
+              <option key={v} value={v} className="bg-zinc-900">
+                {v}
+              </option>
+            ))}
+          </select>
+
+          <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1.5">
             Fokontany (Zone)
           </label>
           <select
@@ -143,7 +166,7 @@ export default function OnboardingScreen({
             value={fokontanyId}
             onChange={(e) => setFokontanyId(e.target.value)}
           >
-            {fokontanyOptions.map((f) => (
+            {fokontanyFiltered.map((f) => (
               <option key={f.id} value={f.id} className="bg-zinc-900">
                 {f.name}
               </option>

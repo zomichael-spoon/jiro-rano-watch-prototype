@@ -64,5 +64,5 @@ export function timeAgo(isoDate: string): string {
  */
 export function isProfileComplete(profile: ProfileWithRelations | null): boolean {
   if (!profile) return false;
-  return !!(profile.display_name && profile.activity_code && profile.fokontany_id);
+  return !!(profile.display_name && profile.activity_code && profile.fokontany_id && profile.ville);
 }

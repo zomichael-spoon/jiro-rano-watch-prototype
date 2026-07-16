@@ -23,9 +23,12 @@ export default function ProfileScreen({
   const [displayName, setDisplayName] = useState(profile?.display_name || "");
   const [activityCode, setActivityCode] = useState(profile?.activity_code || "");
   const [fokontanyId, setFokontanyId] = useState(profile?.fokontany_id || "");
+  const [ville, setVille] = useState(profile?.ville || "");
 
   const selectedActivity = activities.find((a) => a.code === activityCode);
   const selectedZone = fokontanyOptions.find((z) => z.id === fokontanyId);
+  const villes = Array.from(new Set(fokontanyOptions.map((f) => f.district).filter(Boolean as any))) as string[];
+  const fokontanyFiltered = ville ? fokontanyOptions.filter((f) => f.district === ville) : fokontanyOptions;
 
   async function handleSave() {
     if (!displayName.trim()) {
@@ -38,6 +41,7 @@ export default function ProfileScreen({
       const profileUpdate = {
         id: profile!.id,
         display_name: displayName.trim(),
+        ville: ville || null,
         role: profile!.role,
         activity_code: activityCode || null,
         fokontany_id: fokontanyId || null,
@@ -61,6 +65,7 @@ export default function ProfileScreen({
     setDisplayName(profile?.display_name || "");
     setActivityCode(profile?.activity_code || "");
     setFokontanyId(profile?.fokontany_id || "");
+    setVille(profile?.ville || "");
     setIsEditing(false);
   }
 
@@ -153,18 +158,37 @@ export default function ProfileScreen({
             <div className="flex-1">
               <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Zone (Fokontany)</p>
               {isEditing ? (
-                <select
-                  value={fokontanyId}
-                  onChange={(e) => setFokontanyId(e.target.value)}
-                  className="w-full text-sm bg-background rounded-lg px-2 py-1 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                >
-                  <option value="">— Choisir une zone —</option>
-                  {fokontanyOptions.map((z) => (
-                    <option key={z.id} value={z.id}>
-                      {z.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="space-y-2">
+                  <select
+                    value={ville}
+                    onChange={(e) => {
+                      setVille(e.target.value);
+                      // reset fokontany when ville changes
+                      setFokontanyId("");
+                    }}
+                    className="w-full text-sm bg-background rounded-lg px-2 py-1 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  >
+                    <option value="">— Choisir une ville —</option>
+                    {villes.map((v) => (
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={fokontanyId}
+                    onChange={(e) => setFokontanyId(e.target.value)}
+                    className="w-full text-sm bg-background rounded-lg px-2 py-1 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  >
+                    <option value="">— Choisir une zone —</option>
+                    {fokontanyFiltered.map((z) => (
+                      <option key={z.id} value={z.id}>
+                        {z.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               ) : (
                 <p className="text-sm text-foreground">{selectedZone?.name || "Non défini"}</p>
               )}

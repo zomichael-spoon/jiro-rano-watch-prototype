@@ -48,7 +48,7 @@ export default async function Page() {
       )
       .order("created_at", { ascending: false })
       .limit(200),
-    supabase.from("fokontany").select("id, name, lat, lng").order("name"),
+    supabase.from("fokontany").select("id, name, lat, lng, district").order("name"),
     supabase.from("disruption_types").select("*").order("sort_order"),
     supabase.from("activities").select("*").order("sort_order"),
     supabase
