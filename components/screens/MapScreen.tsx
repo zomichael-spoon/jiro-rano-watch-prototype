@@ -7,7 +7,7 @@ import {
 } from "@/lib/jiro-data";
 import {
   Zap, Droplets, AlertTriangle, Fuel, CheckCircle2,
-  X, Users, MapPin, Clock, Phone, ChevronRight,
+  X, Users, MapPin, Clock, Phone, ChevronRight, Globe,
 } from "lucide-react";
 
 // ── Lazy-load the actual map (SSR must be off for Leaflet) ──────────────────
@@ -30,10 +30,12 @@ const CUT_ICON: Record<CutType, React.ReactNode> = {
   water:    <Droplets className="h-3.5 w-3.5" />,
   dirty:    <AlertTriangle className="h-3.5 w-3.5" />,
   fuel:     <Fuel className="h-3.5 w-3.5" />,
+  road:     <MapPin className="h-3.5 w-3.5" />,
+  internet: <Globe className="h-3.5 w-3.5" />,
   restored: <CheckCircle2 className="h-3.5 w-3.5" />,
 };
 
-const ALL_TYPES: CutType[] = ["power", "water", "dirty", "fuel", "restored"];
+const ALL_TYPES: CutType[] = ["power", "water", "dirty", "fuel", "road", "internet", "restored"];
 
 export default function MapScreen({ reports, onConfirm }: Props) {
   const [filterType, setFilterType] = useState<CutType | "all">("all");
@@ -45,9 +47,9 @@ export default function MapScreen({ reports, onConfirm }: Props) {
   );
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full max-w-screen">
       {/* Type filter bar */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-none px-3 pt-3 pb-2">
+      <div className="flex gap-2 flex-wrap overflow-x-hidden scrollbar-none px-3 pt-3 pb-2">
         {(["all", ...ALL_TYPES] as (CutType | "all")[]).map((t) => {
           const active = filterType === t;
           const colors = t !== "all" ? CUT_COLORS[t] : null;
@@ -64,7 +66,7 @@ export default function MapScreen({ reports, onConfirm }: Props) {
               }`}
             >
               {t !== "all" && CUT_ICON[t]}
-              {t === "all" ? "Tout" : CUT_LABELS[t].split(" ")[1] || CUT_LABELS[t]}
+              {t === "all" ? "Tout" : CUT_LABELS[t] || CUT_LABELS[t]}
             </button>
           );
         })}

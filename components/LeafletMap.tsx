@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Report, CutType } from "@/lib/jiro-data";
@@ -30,6 +30,8 @@ const MARKER_COLORS: Record<CutType, { fill: string; stroke: string }> = {
   water:    { fill: "#3b82f6", stroke: "#2563eb" },
   dirty:    { fill: "#c2410c", stroke: "#9a3412" },
   fuel:     { fill: "#f97316", stroke: "#ea580c" },
+  road:     { fill: "#8b5cf6", stroke: "#7c3aed" },
+  internet: { fill: "#06b6d4", stroke: "#0891b2" },
   restored: { fill: "#10b981", stroke: "#059669" },
 };
 
@@ -59,17 +61,78 @@ interface Props {
   onMarkerClick: (report: Report) => void;
 }
 
+export interface GeoCoordinates {
+  latitude: number;
+  longitude: number;
+  accuracy: number; // Accuracy in meters
+}
+
+/**
+ * Retrieves the current device's GPS coordinates.
+ * @param timeoutMs Timeout limit in milliseconds (default: 10 seconds)
+ */
+export function getCurrentCoordinates(timeoutMs: number = 10000): Promise<GeoCoordinates> {
+  return new Promise((resolve, reject) => {
+    // 1. Safety Check for SSR/PWA Environments
+    if (typeof window === "undefined" || !("geolocation" in navigator)) {
+      return reject(new Error("Geolocation is not supported by this browser or environment."));
+    }
+
+    const options: PositionOptions = {
+      enableHighAccuracy: true, // Use GPS instead of IP lookup if available (highly recommended for PWA)
+      timeout: timeoutMs,
+      maximumAge: 0,            // Do not use a cached position
+    };
+
+    const handleSuccess = (position: GeolocationPosition) => {
+      resolve({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+      });
+    };
+
+    const handleError = (error: GeolocationPositionError) => {
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          reject(new Error("User denied the request for Geolocation."));
+          break;
+        case error.POSITION_UNAVAILABLE:
+          reject(new Error("Location information is unavailable."));
+          break;
+        case error.TIMEOUT:
+          reject(new Error("The request to get user location timed out."));
+          break;
+        default:
+          reject(new Error("An unknown error occurred while retrieving location."));
+      }
+    };
+
+    navigator.geolocation.getCurrentPosition(handleSuccess, handleError, options);
+  });
+}
+
 export default function LeafletMap({ reports, onMarkerClick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef       = useRef<L.Map | null>(null);
   const layerRef     = useRef<L.LayerGroup | null>(null);
+  const [center, setCenter] = useState<L.LatLngTuple>(TANA_CENTER);
+  const [located, setLocated] = useState(false);
+
+  useEffect(() => {
+    getCurrentCoordinates(10000)
+      .then((coords) => {
+        setCenter([coords.latitude, coords.longitude]);
+        setLocated(true);
+      });
+    }, []);
 
   // ── Initialize map once ──────────────────────────────────────────────────
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    if (!containerRef.current || mapRef.current || !located) return;
 
     const map = L.map(containerRef.current, {
-      center: TANA_CENTER,
+      center: center,
       zoom: INITIAL_ZOOM,
       minZoom: 5,
       maxZoom: 18,
@@ -98,7 +161,7 @@ export default function LeafletMap({ reports, onMarkerClick }: Props) {
       mapRef.current = null;
       layerRef.current = null;
     };
-  }, []);
+  }, [located, center]);
 
   // ── Sync markers when reports change ──────────────────────────────────────
   useEffect(() => {
