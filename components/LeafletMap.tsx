@@ -115,7 +115,10 @@ export function getCurrentCoordinates(timeoutMs: number = 10000): Promise<GeoCoo
 export default function LeafletMap({ reports, onMarkerClick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef       = useRef<L.Map | null>(null);
-  const layerRef     = useRef<L.LayerGroup | null>(null);
+
+  // 1. CHANGE: Use state instead of a ref for the layer group
+  const [mapLayer, setMapLayer] = useState<L.LayerGroup | null>(null);
+
   const [center, setCenter] = useState<L.LatLngTuple>(TANA_CENTER);
   const [located, setLocated] = useState(false);
 
@@ -125,7 +128,7 @@ export default function LeafletMap({ reports, onMarkerClick }: Props) {
         setCenter([coords.latitude, coords.longitude]);
         setLocated(true);
       });
-    }, []);
+  }, []);
 
   // ── Initialize map once ──────────────────────────────────────────────────
   useEffect(() => {
@@ -142,42 +145,45 @@ export default function LeafletMap({ reports, onMarkerClick }: Props) {
       attributionControl: true,
     });
 
-    // Dark tile layer (CartoDB Dark Matter)
     L.tileLayer(
       "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
       {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
         subdomains: "abcd",
         maxZoom: 20,
       },
     ).addTo(map);
 
     mapRef.current = map;
-    layerRef.current = L.layerGroup().addTo(map);
+    
+    // 2. CHANGE: Create the layer group and save it to state
+    const layerGroup = L.layerGroup().addTo(map);
+    setMapLayer(layerGroup);
 
     return () => {
       map.remove();
       mapRef.current = null;
-      layerRef.current = null;
+      setMapLayer(null); // Clean up state
     };
   }, [located, center]);
 
-  // ── Sync markers when reports change ──────────────────────────────────────
+  // ── Sync markers when reports OR mapLayer change ──────────────────────────
   useEffect(() => {
-    const layer = layerRef.current;
-    if (!layer) return;
+    // 3. CHANGE: We now depend on mapLayer (state), which guarantees this fires
+    // the exact moment the map layer is created!
+    if (!mapLayer) return;
 
-    layer.clearLayers();
+    mapLayer.clearLayers();
 
     reports.forEach((report) => {
       const icon = makeIcon(report.type, report.is_active ?? true);
       const marker = L.marker([report.lat, report.lng], { icon });
       marker.on("click", () => onMarkerClick(report));
-      marker.addTo(layer);
+      marker.addTo(mapLayer);
     });
-  }, [reports, onMarkerClick]);
-
+    
+    // Clean dependency array containing no refs
+  }, [reports, onMarkerClick, mapLayer]);
   return (
     <div
       ref={containerRef}
