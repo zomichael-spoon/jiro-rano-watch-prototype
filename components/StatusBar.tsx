@@ -79,12 +79,6 @@ export default function StatusBar({ profile, reports }: Props) {
           </span>
         )}
       </div>
-
-      {/* Right: time + wifi */}
-      <div className="flex items-center gap-2">
-        <Wifi className="h-3 w-3 text-muted-foreground" />
-        <span className="text-[12px] font-semibold text-foreground tabular-nums">{timeStr}</span>
-      </div>
     </header>
   );
 }

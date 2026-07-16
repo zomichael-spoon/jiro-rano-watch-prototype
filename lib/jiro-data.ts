@@ -2,7 +2,7 @@
 
 export type Role = "citizen" | "provider";
 export type Screen = "onboarding" | "map" | "report" | "provider" | "feed" | "ai";
-export type CutType = "power" | "water" | "dirty" | "fuel" | "restored";
+export type CutType = "power" | "water" | "dirty" | "fuel" | "road" | "internet" | "restored";
 export type Activity = "menage" | "restaurant" | "salon" | "bureau" | "hotel" | "marche";
 
 export interface UserProfile {
