@@ -31,7 +31,8 @@ export default function BottomNav({ current, role, onChange, reportCount }: Prop
   const visible = NAV_ITEMS.filter((item) => !item.roleOnly || item.roleOnly === role);
 
   return (
-    <nav className="flex items-stretch border-t border-border bg-background/95 backdrop-blur-sm pb-safe">
+    <nav className="flex justify-center items-stretch border-t border-border bg-background/95 backdrop-blur-sm pb-safe">
+      <div className="flex w-full max-w-lg">
       {visible.map(({ screen, label, Icon }) => {
         const active = current === screen;
         const isFeed = screen === "feed";
@@ -60,6 +61,7 @@ export default function BottomNav({ current, role, onChange, reportCount }: Prop
           </button>
         );
       })}
+      </div>
     </nav>
   );
 }
