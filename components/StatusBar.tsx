@@ -29,10 +29,6 @@ export default function StatusBar({ profile, reports }: Props) {
     <header className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-border bg-background/95 backdrop-blur-sm z-20">
       {/* Left: App name + role */}
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1">
-          <Zap className="h-3.5 w-3.5 text-amber-400" />
-          <Droplets className="h-3.5 w-3.5 text-blue-400" />
-        </div>
         <div>
           <span className="text-[13px] font-bold text-foreground tracking-tight">JiroRano</span>
           <span
