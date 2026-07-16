@@ -126,7 +126,7 @@ export default function PwaInstaller() {
           aria-label="Installer l'application"
           className="fixed bottom-20 left-3 right-3 z-50 animate-in slide-in-from-bottom-4 duration-300"
         >
-          <div className="relative flex items-center gap-3 rounded-2xl border border-amber-500/30 bg-[#0f111a]/95 backdrop-blur-xl px-4 py-3 shadow-2xl shadow-amber-500/10">
+          <div className="relative flex items-center gap-3 rounded-2xl border border-amber-500/30 bg-[#0f111a]/95 backdrop-blur-xl px-4 py-3 shadow-2xl shadow-amber-500/10 z-50">
             {/* Glow */}
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-amber-500/5 via-transparent to-blue-500/5 pointer-events-none" />
 
@@ -169,7 +169,7 @@ export default function PwaInstaller() {
           className="fixed bottom-20 left-3 right-3 z-50 animate-in slide-in-from-bottom-4 duration-300"
           style={{ bottom: showInstallBanner ? "9rem" : undefined }}
         >
-          <div className="relative flex items-center gap-3 rounded-2xl border border-blue-500/30 bg-[#0f111a]/95 backdrop-blur-xl px-4 py-3 shadow-2xl shadow-blue-500/10">
+          <div className="relative flex items-center gap-3 rounded-2xl border border-blue-500/30 bg-[#0f111a]/95 backdrop-blur-xl px-4 py-3 shadow-2xl shadow-blue-500/10 z-50">
             {/* Glow */}
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
 

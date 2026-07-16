@@ -156,7 +156,7 @@ export default function LeafletMap({ reports, onMarkerClick }: Props) {
     ).addTo(map);
 
     mapRef.current = map;
-    
+
     // 2. CHANGE: Create the layer group and save it to state
     const layerGroup = L.layerGroup().addTo(map);
     setMapLayer(layerGroup);
@@ -182,13 +182,13 @@ export default function LeafletMap({ reports, onMarkerClick }: Props) {
       marker.on("click", () => onMarkerClick(report));
       marker.addTo(mapLayer);
     });
-    
+
     // Clean dependency array containing no refs
   }, [reports, onMarkerClick, mapLayer]);
   return (
     <div
       ref={containerRef}
-      className="h-full w-full"
+      className="h-full w-full z-1"
       style={{ background: "#0f1117" }}
     />
   );
