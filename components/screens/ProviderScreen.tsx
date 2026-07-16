@@ -1,80 +1,88 @@
 "use client";
 
-import { useState } from "react";
-import { Report, CutType, FOKONTANY, CUT_COLORS } from "@/lib/jiro-data";
-import { ShieldCheck, Calendar, Clock, FileText, Phone, Send, CheckCircle2, Zap, Droplets, Fuel } from "lucide-react";
-
-// Approximate center coords per fokontany
-const FOKONTANY_COORDS: Record<string, [number, number]> = {
-  "Analakely":       [-18.9101, 47.5362],
-  "Antanimena":      [-18.9078, 47.5401],
-  "Ambohijanaka":    [-18.9230, 47.5290],
-  "Ivandry":         [-18.8871, 47.5497],
-  "Ankorondrano":    [-18.8967, 47.5311],
-  "Ambanidia":       [-18.9227, 47.5284],
-  "Tsaralalàna":     [-18.9174, 47.5218],
-  "Manjakamiadana":  [-18.9050, 47.5330],
-  "Ampefiloha":      [-18.9155, 47.5370],
-  "Ankadifotsy":     [-18.9305, 47.5350],
-  "Antsahavola":     [-18.9130, 47.5310],
-  "Behoririka":      [-18.9190, 47.5330],
-  "Faravohitra":     [-18.9048, 47.5421],
-  "Isoraka":         [-18.9200, 47.5400],
-  "Ambohipo":        [-18.8980, 47.5600],
-};
+import { useState, useEffect } from "react";
+import { ShieldCheck, Calendar, Clock, FileText, Phone, Send, CheckCircle2 } from "lucide-react";
+import type {
+  CreateOfficialReportDTO, DisruptionCode, DisruptionType,
+  FokontanyOption, InterventionReason,
+} from "@/types";
+import { resolveIcon } from "@/lib/utils";
 
 interface Props {
-  onSubmit: (r: Omit<Report, "id" | "created_at" | "confirmations">) => void;
+  disruptionTypes: DisruptionType[];
+  fokontanyOptions: FokontanyOption[];
+  interventionReasons: InterventionReason[];
+  organizationId: string | null;
+  defaultHotline: string;
+  onSubmit: (r: Omit<CreateOfficialReportDTO, "reporter_id">) => void;
 }
 
-const PROVIDER_TYPES: { type: CutType; label: string }[] = [
-  { type: "power", label: "Coupure électricité planifiée" },
-  { type: "water", label: "Rationnement eau" },
-  { type: "fuel",  label: "Rupture carburant" },
-];
+// Un prestataire ne publie jamais de "dirty" (constaté par un citoyen) ni "restored"
+// (généré automatiquement à la clôture) — seulement des interventions planifiées.
+const PLANNED_TYPES: DisruptionCode[] = ["power", "water", "fuel"];
 
-const REASONS = [
-  "Maintenance préventive",
-  "Travaux réseau HTA",
-  "Réparation conduite principale",
-  "Rationnement eau saisonnière",
-  "Défaut transformateur",
-  "Mise à jour infrastructure",
-];
+export default function ProviderScreen({
+  disruptionTypes,
+  fokontanyOptions,
+  interventionReasons,
+  organizationId,
+  defaultHotline,
+  onSubmit,
+}: Props) {
+  const providerTypes = disruptionTypes.filter((d) => PLANNED_TYPES.includes(d.code));
 
-export default function ProviderScreen({ onSubmit }: Props) {
-  const [cutType, setCutType] = useState<CutType>("power");
-  const [fokontanyList, setFokontanyList] = useState<string[]>(["Analakely"]);
+  const [cutCode, setCutCode] = useState<DisruptionCode>(providerTypes[0]?.code ?? "power");
+  const [fokontanyIds, setFokontanyIds] = useState<string[]>(
+    fokontanyOptions[0] ? [fokontanyOptions[0].id] : [],
+  );
+
+  useEffect(() => {
+    if (fokontanyIds.length === 0 && fokontanyOptions.length > 0) {
+      setFokontanyIds([fokontanyOptions[0].id]);
+    }
+  }, [fokontanyIds.length, fokontanyOptions]);
+
+  // Motifs filtrés par type sélectionné (intervention_reasons.disruption_type_code).
+  const relevantReasons = interventionReasons.filter(
+    (r) => r.disruption_type_code === cutCode || r.disruption_type_code === null,
+  );
+
   const [startTime, setStartTime] = useState("08:00");
   const [endTime, setEndTime] = useState("17:00");
-  const [reason, setReason] = useState(REASONS[0]);
-  const [hotline, setHotline] = useState("+261 20 22 393 00");
+  const [reasonId, setReasonId] = useState(relevantReasons[0]?.id ?? "");
+  const [hotline, setHotline] = useState(defaultHotline);
   const [toast, setToast] = useState(false);
 
-  function toggleZone(f: string) {
-    setFokontanyList((prev) =>
-      prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f],
-    );
+  function toggleZone(id: string) {
+    setFokontanyIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
   function handleSubmit() {
-    fokontanyList.forEach((fkt) => {
-      const coords = FOKONTANY_COORDS[fkt] ?? [-18.9101, 47.5362];
-      const r: Omit<Report, "id" | "created_at" | "confirmations"> = {
-        type: cutType,
-        fokontany: fkt,
-        description: `${reason} — Zone ${fkt}. Début: ${startTime}`,
+    const reason = relevantReasons.find((r) => r.id === reasonId) ?? relevantReasons[0];
+
+    fokontanyIds.forEach((fid) => {
+      const zone = fokontanyOptions.find((f) => f.id === fid);
+      if (!zone) return;
+
+      onSubmit({
+        type: cutCode,
+        disruption_code: cutCode,
+        fokontany: zone.name,
+        fokontany_id: zone.id,
+        description: `${reason?.label_fr ?? "Intervention planifiée"} — Zone ${zone.name}. Début: ${startTime}`,
         is_active: true,
         is_official: true,
-        author: "JIRAMA",
+        author: null,
+        reason: reason?.label_fr ?? null,
+        reason_id: reason?.id ?? null,
         planned_end: endTime,
-        reason,
         hotline: hotline || null,
-        lat: coords[0] + (Math.random() - 0.5) * 0.004,
-        lng: coords[1] + (Math.random() - 0.5) * 0.004,
-      };
-      onSubmit(r);
+        organization_id: organizationId,
+        lat: zone.lat + (Math.random() - 0.5) * 0.004,
+        lng: zone.lng + (Math.random() - 0.5) * 0.004,
+      });
     });
+
     setToast(true);
     setTimeout(() => setToast(false), 3000);
   }
@@ -88,7 +96,6 @@ export default function ProviderScreen({ onSubmit }: Props) {
         </div>
       )}
 
-      {/* Header */}
       <div className="flex items-center gap-3 rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4">
         <div className="rounded-xl bg-blue-500/20 p-2.5">
           <ShieldCheck className="h-5 w-5 text-blue-400" />
@@ -99,32 +106,26 @@ export default function ProviderScreen({ onSubmit }: Props) {
         </div>
       </div>
 
-      {/* Type */}
+      {/* Type — depuis disruption_types */}
       <div>
         <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2">
           Type d&apos;intervention
         </label>
         <div className="flex gap-2">
-          {PROVIDER_TYPES.map(({ type, label: _label }) => {
-            const c = CUT_COLORS[type];
-            const active = cutType === type;
+          {providerTypes.map((dt) => {
+            const Icon = resolveIcon(dt.icon);
+            const active = cutCode === dt.code;
             return (
               <button
-                key={type}
-                onClick={() => setCutType(type)}
+                key={dt.code}
+                onClick={() => setCutCode(dt.code)}
                 className={`flex-1 flex flex-col items-center gap-1.5 rounded-2xl border p-3 text-center transition-all ${
-                  active ? `${c.border} ${c.bg}` : "border-border bg-card"
+                  active ? `${dt.color_border} ${dt.color_bg}` : "border-border bg-card"
                 }`}
               >
-                {type === "power" ? (
-                  <Zap className={`h-4 w-4 ${active ? c.text : "text-muted-foreground"}`} />
-                ) : type === "water" ? (
-                  <Droplets className={`h-4 w-4 ${active ? c.text : "text-muted-foreground"}`} />
-                ) : (
-                  <Fuel className={`h-4 w-4 ${active ? c.text : "text-muted-foreground"}`} />
-                )}
-                <span className={`text-[11px] font-semibold leading-tight ${active ? c.text : "text-muted-foreground"}`}>
-                  {type === "power" ? "Électricité" : type === "water" ? "Eau" : "Carburant"}
+                <Icon className={`h-4 w-4 ${active ? dt.color_text : "text-muted-foreground"}`} />
+                <span className={`text-[11px] font-semibold leading-tight ${active ? dt.color_text : "text-muted-foreground"}`}>
+                  {dt.label_fr}
                 </span>
               </button>
             );
@@ -138,26 +139,26 @@ export default function ProviderScreen({ onSubmit }: Props) {
           Zones affectées (Fokontany)
         </label>
         <div className="flex flex-wrap gap-2">
-          {FOKONTANY.map((f) => {
-            const sel = fokontanyList.includes(f);
+          {fokontanyOptions.map((f) => {
+            const sel = fokontanyIds.includes(f.id);
             return (
               <button
-                key={f}
-                onClick={() => toggleZone(f)}
+                key={f.id}
+                onClick={() => toggleZone(f.id)}
                 className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${
                   sel
                     ? "border-amber-500/60 bg-amber-500/15 text-amber-400"
                     : "border-border bg-card text-muted-foreground"
                 }`}
               >
-                {f}
+                {f.name}
               </button>
             );
           })}
         </div>
-        {fokontanyList.length > 0 && (
+        {fokontanyIds.length > 0 && (
           <p className="text-[11px] text-muted-foreground mt-1.5">
-            {fokontanyList.length} zone{fokontanyList.length > 1 ? "s" : ""} sélectionnée{fokontanyList.length > 1 ? "s" : ""}
+            {fokontanyIds.length} zone{fokontanyIds.length > 1 ? "s" : ""} sélectionnée{fokontanyIds.length > 1 ? "s" : ""}
           </p>
         )}
       </div>
@@ -188,18 +189,18 @@ export default function ProviderScreen({ onSubmit }: Props) {
         </div>
       </div>
 
-      {/* Reason */}
+      {/* Reason — depuis intervention_reasons, filtré par type */}
       <div>
         <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1.5">
           <span className="flex items-center gap-1"><FileText className="h-3 w-3" />Motif</span>
         </label>
         <select
           className="w-full rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-foreground appearance-none focus:outline-none focus:ring-2 focus:ring-primary/50"
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
+          value={reasonId}
+          onChange={(e) => setReasonId(e.target.value)}
         >
-          {REASONS.map((r) => (
-            <option key={r} value={r} className="bg-zinc-900">{r}</option>
+          {relevantReasons.map((r) => (
+            <option key={r.id} value={r.id} className="bg-zinc-900">{r.label_fr}</option>
           ))}
         </select>
       </div>
@@ -210,18 +211,17 @@ export default function ProviderScreen({ onSubmit }: Props) {
           <span className="flex items-center gap-1"><Phone className="h-3 w-3" />Hotline / Contact</span>
         </label>
         <input
-          className="w-full rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+          className="w-full rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
           placeholder="+261 XX XX XXX XX"
           value={hotline}
           onChange={(e) => setHotline(e.target.value)}
         />
       </div>
 
-      {/* Submit */}
       <button
         onClick={handleSubmit}
-        disabled={fokontanyList.length === 0}
-        className="flex items-center justify-center gap-2 w-full rounded-2xl bg-blue-600 py-4 text-sm font-bold text-white transition-opacity active:opacity-80 disabled:opacity-40"
+        disabled={fokontanyIds.length === 0}
+        className="flex items-center justify-center gap-2 w-full rounded-2xl bg-blue-600 py-4 text-sm font-bold text-white transition-opacity active:opacity-80"
       >
         <Send className="h-4 w-4" />
         Publier l&apos;avis officiel

@@ -2,15 +2,10 @@
 
 import { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
-import {
-  Report, CutType, CUT_COLORS, CUT_LABELS, timeAgo,
-} from "@/lib/jiro-data";
-import {
-  Zap, Droplets, AlertTriangle, Fuel, CheckCircle2,
-  X, Users, MapPin, Clock, Phone, ChevronRight, Globe,
-} from "lucide-react";
+import { X, Users, MapPin, Clock, Phone, ChevronRight } from "lucide-react";
+import type { ReportWithRelations, DisruptionCode, DisruptionType } from "@/types";
+import { resolveIcon, timeAgo } from "@/lib/utils";
 
-// ── Lazy-load the actual map (SSR must be off for Leaflet) ──────────────────
 const LeafletMap = dynamic(() => import("@/components/LeafletMap"), {
   ssr: false,
   loading: () => (
@@ -21,25 +16,14 @@ const LeafletMap = dynamic(() => import("@/components/LeafletMap"), {
 });
 
 interface Props {
-  reports: Report[];
+  reports: ReportWithRelations[];
+  disruptionTypes: DisruptionType[];
   onConfirm: (id: string) => void;
 }
 
-const CUT_ICON: Record<CutType, React.ReactNode> = {
-  power:    <Zap className="h-3.5 w-3.5" />,
-  water:    <Droplets className="h-3.5 w-3.5" />,
-  dirty:    <AlertTriangle className="h-3.5 w-3.5" />,
-  fuel:     <Fuel className="h-3.5 w-3.5" />,
-  road:     <MapPin className="h-3.5 w-3.5" />,
-  internet: <Globe className="h-3.5 w-3.5" />,
-  restored: <CheckCircle2 className="h-3.5 w-3.5" />,
-};
-
-const ALL_TYPES: CutType[] = ["power", "water", "dirty", "fuel", "road", "internet", "restored"];
-
-export default function MapScreen({ reports, onConfirm }: Props) {
-  const [filterType, setFilterType] = useState<CutType | "all">("all");
-  const [selected, setSelected] = useState<Report | null>(null);
+export default function MapScreen({ reports, disruptionTypes, onConfirm }: Props) {
+  const [filterType, setFilterType] = useState<DisruptionCode | "all">("all");
+  const [selected, setSelected] = useState<ReportWithRelations | null>(null);
 
   const visible = useMemo(
     () => reports.filter((r) => filterType === "all" || r.type === filterType),
@@ -47,37 +31,44 @@ export default function MapScreen({ reports, onConfirm }: Props) {
   );
 
   return (
-    <div className="flex flex-col h-full max-w-screen">
-      {/* Type filter bar */}
-      <div className="flex gap-2 flex-wrap overflow-x-hidden scrollbar-none px-3 pt-3 pb-2">
-        {(["all", ...ALL_TYPES] as (CutType | "all")[]).map((t) => {
-          const active = filterType === t;
-          const colors = t !== "all" ? CUT_COLORS[t] : null;
+    <div className="flex flex-col h-full">
+      {/* Type filter bar — généré depuis disruption_types (ordre = sort_order) */}
+      <div className="flex gap-2 overflow-x-auto scrollbar-none px-3 pt-3 pb-2">
+        <button
+          onClick={() => setFilterType("all")}
+          className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-all ${
+            filterType === "all"
+              ? "border-primary/60 bg-primary/15 text-primary"
+              : "border-border bg-card text-muted-foreground"
+          }`}
+        >
+          Tout
+        </button>
+        {disruptionTypes.map((dt) => {
+          const Icon = resolveIcon(dt.icon);
+          const active = filterType === dt.code;
           return (
             <button
-              key={t}
-              onClick={() => setFilterType(t)}
+              key={dt.code}
+              onClick={() => setFilterType(dt.code)}
               className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-all ${
                 active
-                  ? t === "all"
-                    ? "border-primary/60 bg-primary/15 text-primary"
-                    : `${colors!.border} ${colors!.bg} ${colors!.text}`
+                  ? `${dt.color_border} ${dt.color_bg} ${dt.color_text}`
                   : "border-border bg-card text-muted-foreground"
               }`}
             >
-              {t !== "all" && CUT_ICON[t]}
-              {t === "all" ? "Tout" : CUT_LABELS[t] || CUT_LABELS[t]}
+              <Icon className="h-3.5 w-3.5" />
+              {dt.label_fr.split(" ")[1] || dt.label_fr}
             </button>
           );
         })}
       </div>
 
       {/* Map fills remaining space */}
-      <div className="relative flex-1 mx-3 mb-3 rounded-2xl overflow-hidden border border-border min-h-[300px]">
+      <div className="relative flex-1 mx-3 mb-3 rounded-2xl overflow-hidden border border-border min-h-75">
         <LeafletMap reports={visible} onMarkerClick={setSelected} />
       </div>
 
-      {/* Count */}
       <div className="px-4 pb-2">
         <span className="text-xs text-muted-foreground">
           {visible.length} signalement{visible.length !== 1 ? "s" : ""} affiché{visible.length !== 1 ? "s" : ""}
@@ -86,104 +77,117 @@ export default function MapScreen({ reports, onConfirm }: Props) {
 
       {/* Bottom drawer */}
       {selected && (
-        <div
-          className="absolute inset-0 z-[1000] flex flex-col justify-end"
-          onClick={() => setSelected(null)}
-        >
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <div
-            className="relative z-10 rounded-t-3xl border-t border-border bg-card p-5 pb-8"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-border" />
-
-            {/* Header */}
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className={`rounded-xl p-2.5 ${CUT_COLORS[selected.type].bg}`}>
-                  <span className={CUT_COLORS[selected.type].text}>
-                    {CUT_ICON[selected.type]}
-                  </span>
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-foreground">{CUT_LABELS[selected.type]}</h3>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <MapPin className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">{selected.fokontany}</span>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelected(null)}
-                className="rounded-full bg-secondary p-1.5 text-muted-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <p className="text-sm text-foreground/80 leading-relaxed mb-4">
-              {selected.description}
-            </p>
-
-            <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
-              <span className="flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
-                {timeAgo(selected.created_at)}
-              </span>
-              {selected.author && (
-                <span className="flex items-center gap-1">
-                  <Users className="h-3.5 w-3.5" />
-                  {selected.author}
-                </span>
-              )}
-              {selected.is_official && (
-                <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-blue-400 font-semibold">
-                  Officiel
-                </span>
-              )}
-            </div>
-
-            {selected.reason && (
-              <div className="rounded-xl border border-border bg-secondary p-3 mb-4 text-xs text-muted-foreground">
-                <span className="font-semibold text-foreground">Motif:</span> {selected.reason}
-                {selected.planned_end && (
-                  <span className="block mt-1">
-                    <span className="font-semibold text-foreground">Fin prévue:</span>{" "}
-                    {selected.planned_end}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {selected.hotline && (
-              <a
-                href={`tel:${selected.hotline}`}
-                className="flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 mb-4"
-              >
-                <Phone className="h-4 w-4 text-blue-400" />
-                <span className="text-sm text-blue-400 font-semibold">{selected.hotline}</span>
-              </a>
-            )}
-
-            <button
-              onClick={() => {
-                onConfirm(selected.id);
-                setSelected({ ...selected, confirmations: selected.confirmations + 1 });
-              }}
-              className="w-full flex items-center justify-between rounded-2xl border border-amber-500/30 bg-amber-500/10 px-5 py-3.5 transition-colors active:bg-amber-500/20"
-            >
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-amber-400" />
-                <span className="text-sm font-semibold text-amber-400">+1 Moi aussi / Aho koa</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-sm font-bold text-amber-400">{selected.confirmations}</span>
-                <ChevronRight className="h-4 w-4 text-amber-400" />
-              </div>
-            </button>
-          </div>
-        </div>
+        <ReportDrawer
+          report={selected}
+          onClose={() => setSelected(null)}
+          onConfirm={() => {
+            onConfirm(selected.id);
+            setSelected({ ...selected, confirmations: selected.confirmations + 1 });
+          }}
+        />
       )}
+    </div>
+  );
+}
+
+function ReportDrawer({
+  report,
+  onClose,
+  onConfirm,
+}: {
+  report: ReportWithRelations;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const dt = report.disruption_type;
+  const Icon = dt ? resolveIcon(dt.icon) : null;
+
+  return (
+    <div className="absolute inset-0 z-1000 flex flex-col justify-end" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div
+        className="relative z-10 rounded-t-3xl border-t border-border bg-card p-5 pb-8"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-border" />
+
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className={`rounded-xl p-2.5 ${dt?.color_bg ?? "bg-secondary"}`}>
+              <span className={dt?.color_text ?? "text-muted-foreground"}>
+                {Icon && <Icon className="h-3.5 w-3.5" />}
+              </span>
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-foreground">{dt?.label_fr ?? report.type}</h3>
+              <div className="flex items-center gap-1 mt-0.5">
+                <MapPin className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">{report.fokontany}</span>
+              </div>
+            </div>
+          </div>
+          <button onClick={onClose} className="rounded-full bg-secondary p-1.5 text-muted-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <p className="text-sm text-foreground/80 leading-relaxed mb-4">{report.description}</p>
+
+        <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
+          <span className="flex items-center gap-1">
+            <Clock className="h-3.5 w-3.5" />
+            {timeAgo(report.created_at)}
+          </span>
+          {report.author && (
+            <span className="flex items-center gap-1">
+              <Users className="h-3.5 w-3.5" />
+              {report.author}
+            </span>
+          )}
+          {report.is_official && (
+            <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-blue-400 font-semibold">
+              Officiel
+            </span>
+          )}
+        </div>
+
+        {report.reason && (
+          <div className="rounded-xl border border-border bg-secondary p-3 mb-4 text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground">Motif:</span> {report.reason}
+            {report.planned_end && (
+              <span className="block mt-1">
+                <span className="font-semibold text-foreground">Fin prévue:</span> {report.planned_end}
+              </span>
+            )}
+          </div>
+        )}
+
+        {report.hotline && (
+          <a
+            href={`tel:${report.hotline}`}
+            className="flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 mb-4"
+          >
+            <Phone className="h-4 w-4 text-blue-400" />
+            <span className="text-sm text-blue-400 font-semibold">{report.hotline}</span>
+          </a>
+        )}
+
+        {!report.is_official && (
+          <button
+            onClick={onConfirm}
+            className="w-full flex items-center justify-between rounded-2xl border border-amber-500/30 bg-amber-500/10 px-5 py-3.5 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-amber-400" />
+              <span className="text-sm font-semibold text-amber-400">+1 Moi aussi / Aho koa</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-sm font-bold text-amber-400">{report.confirmations}</span>
+              <ChevronRight className="h-4 w-4 text-amber-400" />
+            </div>
+          </button>
+        )}
+      </div>
     </div>
   );
 }

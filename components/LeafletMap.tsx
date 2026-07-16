@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Report, CutType } from "@/lib/jiro-data";
+import { ReportWithRelations } from "@/types";
 
 // ── Fix Leaflet default icon paths broken by bundlers ──────────────────────
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -57,8 +58,8 @@ function makeIcon(type: CutType, isActive: boolean): L.DivIcon {
 }
 
 interface Props {
-  reports: Report[];
-  onMarkerClick: (report: Report) => void;
+  reports: ReportWithRelations[];
+  onMarkerClick: (report: ReportWithRelations) => void;
 }
 
 export interface GeoCoordinates {

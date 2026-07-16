@@ -1,15 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { UserProfile, Report, ACTIVITIES } from "@/lib/jiro-data";
-import {
-  Sparkles, Loader2, ShieldAlert, Droplets, Zap,
-  Phone, BookOpen, Fuel, CheckCircle2,
-} from "lucide-react";
+import { Sparkles, Loader2, Droplets, Zap, Phone, BookOpen, Fuel, CheckCircle2 } from "lucide-react";
+import type { ProfileWithRelations, ReportWithRelations, EmergencyContact, DisruptionCode } from "@/types";
 
 interface Props {
-  profile: UserProfile;
-  reports: Report[];
+  profile: ProfileWithRelations;
+  reports: ReportWithRelations[];
+  emergencyContacts: EmergencyContact[];
 }
 
 interface AdviceBlock {
@@ -23,22 +21,21 @@ interface AdviceBlock {
   Icon: React.ElementType;
 }
 
-interface Contact {
-  name: string;
-  phone: string;
-  note: string;
-}
+/**
+ * Logique de conseil conservée telle quelle (mock côté client) — seule la
+ * source des contacts d'urgence change: ils viennent maintenant de la table
+ * emergency_contacts (filtrable par type de perturbation actif et fokontany).
+ */
+function generateAdvice(profile: ProfileWithRelations, reports: ReportWithRelations[]) {
+  const zoneName = profile.fokontany_ref?.name ?? "";
+  const active = reports.filter((r) => r.is_active && r.fokontany === zoneName);
 
-function generateAdvice(profile: UserProfile, reports: Report[]) {
-  const active = reports.filter(
-    (r) => r.is_active && (r.fokontany === profile.fokontany || r.fokontany === "all")
-  );
   const hasWater = active.some((r) => r.type === "water" || r.type === "dirty");
   const isDirty = active.some((r) => r.type === "dirty");
   const hasPower = active.some((r) => r.type === "power");
-  const hasFuel  = active.some((r) => r.type === "fuel");
-  const isRestaurant = profile.activity === "restaurant";
-  const isSalon = profile.activity === "salon";
+  const hasFuel = active.some((r) => r.type === "fuel");
+  const isRestaurant = profile.activity_code === "restaurant";
+  const isSalon = profile.activity_code === "salon";
 
   const blocks: AdviceBlock[] = [];
 
@@ -187,38 +184,51 @@ function generateAdvice(profile: UserProfile, reports: Report[]) {
     });
   }
 
-  const contacts: Contact[] = [
-    { name: "JIRAMA Antananarivo", phone: "+261 20 22 393 00", note: "Coupures eau & électricité" },
-    { name: "JIRAMA Urgences 24h", phone: "+261 20 22 224 77", note: "Dépannage d'urgence" },
-    { name: "Pompiers / 18", phone: "18", note: "Urgences générales" },
-    ...(hasWater
-      ? [
-          { name: "Hydro-Tanà (livraison rano)", phone: "+261 34 12 345 67", note: "Livraison eau à domicile" },
-          { name: "Plombier — réseau local", phone: "+261 32 98 765 43", note: "Réparation conduite" },
-        ]
-      : []),
-    ...(hasPower
-      ? [{ name: "Technicien électricien", phone: "+261 33 45 678 90", note: "Intervention réseau" }]
-      : []),
-  ];
+  const activeTypes = new Set<DisruptionCode>([
+    ...(hasWater || isDirty ? (["water", "dirty"] as DisruptionCode[]) : []),
+    ...(hasPower ? (["power"] as DisruptionCode[]) : []),
+    ...(hasFuel ? (["fuel"] as DisruptionCode[]) : []),
+  ]);
 
-  return { blocks, contacts };
+  return { blocks, activeTypes };
 }
 
-export default function AIAdviceScreen({ profile, reports }: Props) {
+/**
+ * Sélectionne les contacts pertinents : toujours les contacts génériques
+ * (disruption_code IS NULL), + ceux liés aux perturbations actives dans la
+ * zone du profil, + ceux spécifiques au fokontany s'il y en a.
+ */
+function selectContacts(
+  contacts: EmergencyContact[],
+  activeTypes: Set<DisruptionCode>,
+  fokontanyId: string | null,
+): EmergencyContact[] {
+  return contacts
+    .filter((c) => {
+      const matchesType = !c.disruption_code || activeTypes.has(c.disruption_code);
+      const matchesZone = !c.fokontany_id || c.fokontany_id === fokontanyId;
+      return matchesType && matchesZone;
+    })
+    .sort((a, b) => a.sort_order - b.sort_order);
+}
+
+export default function AIAdviceScreen({ profile, reports, emergencyContacts }: Props) {
   const [loading, setLoading] = useState(false);
   const [shown, setShown] = useState(false);
 
   function handleGetAdvice() {
     setLoading(true);
-    setTimeout(() => { setLoading(false); setShown(true); }, 1800);
+    setTimeout(() => {
+      setLoading(false);
+      setShown(true);
+    }, 1800);
   }
 
-  const { blocks, contacts } = generateAdvice(profile, reports);
+  const { blocks, activeTypes } = generateAdvice(profile, reports);
+  const contacts = selectContacts(emergencyContacts, activeTypes, profile.fokontany_id);
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-4 pb-6">
-      {/* Header card */}
       <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4 flex items-center gap-3">
         <div className="rounded-xl bg-primary/20 p-2.5">
           <Sparkles className="h-5 w-5 text-primary" />
@@ -226,12 +236,11 @@ export default function AIAdviceScreen({ profile, reports }: Props) {
         <div>
           <h2 className="text-sm font-bold text-primary">Conseil IA personnalisé</h2>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            Basé sur votre profil: {profile.name || "Utilisateur"} · {profile.fokontany}
+            Basé sur votre profil: {profile.display_name || "Utilisateur"} · {profile.fokontany_ref?.name ?? "—"}
           </p>
         </div>
       </div>
 
-      {/* Profile summary */}
       <div className="rounded-2xl border border-border bg-card p-4 flex gap-3">
         <div className="rounded-lg bg-secondary p-2.5">
           <BookOpen className="h-4 w-4 text-muted-foreground" />
@@ -239,7 +248,7 @@ export default function AIAdviceScreen({ profile, reports }: Props) {
         <div>
           <p className="text-xs text-muted-foreground">Profil analysé</p>
           <p className="text-sm font-semibold text-foreground mt-0.5">
-            {ACTIVITIES[profile.activity]} · {profile.fokontany}
+            {profile.activity?.label_fr ?? "—"} · {profile.fokontany_ref?.name ?? "—"}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {profile.notes ? `Note: ${profile.notes}` : "Aucune note spéciale"}
@@ -247,12 +256,11 @@ export default function AIAdviceScreen({ profile, reports }: Props) {
         </div>
       </div>
 
-      {/* CTA */}
       {!shown && (
         <button
           onClick={handleGetAdvice}
           disabled={loading}
-          className="flex items-center justify-center gap-2.5 w-full rounded-2xl bg-primary py-4 text-sm font-bold text-primary-foreground transition-opacity active:opacity-80 disabled:opacity-60"
+          className="flex items-center justify-center gap-2.5 w-full rounded-2xl bg-primary py-4 text-sm font-bold text-primary-foreground transition-opacity active:opacity-80"
         >
           {loading ? (
             <>
@@ -268,24 +276,18 @@ export default function AIAdviceScreen({ profile, reports }: Props) {
         </button>
       )}
 
-      {/* AI Response */}
       {shown && (
         <div className="flex flex-col gap-4">
-          {/* Gemini badge */}
           <div className="flex items-center gap-2">
             <div className="h-px flex-1 bg-border" />
             <span className="text-[10px] text-muted-foreground px-2 bg-background rounded-full border border-border">
-              Conseil IA · Gemini · {new Date().toLocaleTimeString("fr", { hour: "2-digit", minute: "2-digit" })}
+              Conseil IA · {new Date().toLocaleTimeString("fr", { hour: "2-digit", minute: "2-digit" })}
             </span>
             <div className="h-px flex-1 bg-border" />
           </div>
 
-          {/* Advice blocks */}
           {blocks.map((block, i) => (
-            <div
-              key={i}
-              className={`rounded-2xl border ${block.borderClass} ${block.bgClass} p-4 flex flex-col gap-3`}
-            >
+            <div key={i} className={`rounded-2xl border ${block.borderClass} ${block.bgClass} p-4 flex flex-col gap-3`}>
               <div className="flex items-center gap-2">
                 <block.Icon className={`h-4 w-4 ${block.colorClass}`} />
                 <div>
@@ -299,9 +301,7 @@ export default function AIAdviceScreen({ profile, reports }: Props) {
                     <div className={`mt-1.5 h-1.5 w-1.5 rounded-full shrink-0 ${block.colorClass.replace("text-", "bg-")}`} />
                     <div>
                       <p className="text-sm text-foreground/85 leading-relaxed">{step}</p>
-                      <p className="text-[11px] text-muted-foreground italic mt-0.5 leading-relaxed">
-                        {block.stepsMg[j]}
-                      </p>
+                      <p className="text-[11px] text-muted-foreground italic mt-0.5 leading-relaxed">{block.stepsMg[j]}</p>
                     </div>
                   </div>
                 ))}
@@ -309,22 +309,25 @@ export default function AIAdviceScreen({ profile, reports }: Props) {
             </div>
           ))}
 
-          {/* Emergency contacts */}
+          {/* Contacts d'urgence — depuis emergency_contacts, filtrés par contexte */}
           <div className="rounded-2xl border border-border bg-card p-4 flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <Phone className="h-4 w-4 text-muted-foreground" />
               <p className="text-sm font-bold text-foreground">Contacts d&apos;urgence locaux</p>
             </div>
             <div className="flex flex-col gap-2">
-              {contacts.map((c, i) => (
+              {contacts.length === 0 && (
+                <p className="text-xs text-muted-foreground">Aucun contact enregistré pour votre zone.</p>
+              )}
+              {contacts.map((c) => (
                 <a
-                  key={i}
+                  key={c.id}
                   href={`tel:${c.phone}`}
-                  className="flex items-center justify-between rounded-xl border border-border bg-secondary px-3 py-2.5 transition-colors active:bg-secondary/50"
+                  className="flex items-center justify-between rounded-xl border border-border bg-secondary px-3 py-2.5 transition-colors"
                 >
                   <div>
                     <p className="text-xs font-semibold text-foreground">{c.name}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">{c.note}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">{c.note_fr}</p>
                   </div>
                   <span className="text-sm font-bold text-primary">{c.phone}</span>
                 </a>
@@ -332,10 +335,12 @@ export default function AIAdviceScreen({ profile, reports }: Props) {
             </div>
           </div>
 
-          {/* Refresh */}
           <button
-            onClick={() => { setShown(false); setLoading(false); }}
-            className="flex items-center justify-center gap-2 w-full rounded-2xl border border-primary/30 bg-primary/10 py-3 text-sm font-semibold text-primary transition-colors active:bg-primary/20"
+            onClick={() => {
+              setShown(false);
+              setLoading(false);
+            }}
+            className="flex items-center justify-center gap-2 w-full rounded-2xl border border-primary/30 bg-primary/10 py-3 text-sm font-semibold text-primary transition-colors"
           >
             <Sparkles className="h-3.5 w-3.5" />
             Actualiser le conseil
