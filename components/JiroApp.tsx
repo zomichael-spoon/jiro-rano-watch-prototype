@@ -114,7 +114,7 @@ export default function JiroApp() {
               <OnboardingScreen profile={profile} onChange={setProfile} />
             )}
             {screen === "map" && (
-              <div className="relative h-full">
+              <div className="relative h-full max-w-screen">
                 <MapScreen reports={reports} onConfirm={confirmReport} />
               </div>
             )}

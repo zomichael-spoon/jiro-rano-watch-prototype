@@ -45,9 +45,9 @@ export default function MapScreen({ reports, onConfirm }: Props) {
   );
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full max-w-screen">
       {/* Type filter bar */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-none px-3 pt-3 pb-2">
+      <div className="flex gap-2 flex-wrap overflow-x-hidden scrollbar-none px-3 pt-3 pb-2">
         {(["all", ...ALL_TYPES] as (CutType | "all")[]).map((t) => {
           const active = filterType === t;
           const colors = t !== "all" ? CUT_COLORS[t] : null;
@@ -64,7 +64,7 @@ export default function MapScreen({ reports, onConfirm }: Props) {
               }`}
             >
               {t !== "all" && CUT_ICON[t]}
-              {t === "all" ? "Tout" : CUT_LABELS[t].split(" ")[1] || CUT_LABELS[t]}
+              {t === "all" ? "Tout" : CUT_LABELS[t] || CUT_LABELS[t]}
             </button>
           );
         })}
