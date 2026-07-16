@@ -33,7 +33,7 @@ export default function MapScreen({ reports, disruptionTypes, onConfirm }: Props
   return (
     <div className="flex flex-col h-full">
       {/* Type filter bar — généré depuis disruption_types (ordre = sort_order) */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-none px-3 pt-3 pb-2">
+      <div className="flex flex-wrap gap-2 overflow-x-auto scrollbar-none px-3 pt-3 pb-2">
         <button
           onClick={() => setFilterType("all")}
           className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-all ${
@@ -51,14 +51,14 @@ export default function MapScreen({ reports, disruptionTypes, onConfirm }: Props
             <button
               key={dt.code}
               onClick={() => setFilterType(dt.code)}
-              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-all ${
+              className={`flex  items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-all ${
                 active
                   ? `${dt.color_border} ${dt.color_bg} ${dt.color_text}`
                   : "border-border bg-card text-muted-foreground"
               }`}
             >
               <Icon className="h-3.5 w-3.5" />
-              {dt.label_fr.split(" ")[1] || dt.label_fr}
+              {dt.label_fr}
             </button>
           );
         })}
