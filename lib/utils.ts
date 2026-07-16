@@ -1,5 +1,5 @@
 import {
-  Zap, Droplets, AlertTriangle, Fuel, CheckCircle2, type LucideIcon,
+  Zap, Droplets, AlertTriangle, Fuel, CheckCircle2, Globe, MapPin, type LucideIcon,
 } from "lucide-react";
 import type { DisruptionType, DisruptionCode, ProfileWithRelations } from "@/types";
 import { clsx, type ClassValue } from 'clsx'
@@ -27,6 +27,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   "alert-triangle": AlertTriangle,
   fuel: Fuel,
   "check-circle-2": CheckCircle2,
+  globe: Globe,
+  "map-pin": MapPin,
 };
 
 export function resolveIcon(iconName: string): LucideIcon {

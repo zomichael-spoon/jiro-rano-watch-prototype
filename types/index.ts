@@ -9,7 +9,7 @@
 // ---------------------------------------------------------------------------
 
 /** Correspond à reports.type CHECK (...) et disruption_types.code */
-export type DisruptionCode = "power" | "water" | "dirty" | "fuel" | "restored";
+export type DisruptionCode = "power" | "water" | "dirty" | "fuel" | "road" | "internet" | "restored";
 
 /** Correspond à profiles.role CHECK (...) */
 export type UserRole = "citizen" | "provider" | "admin";

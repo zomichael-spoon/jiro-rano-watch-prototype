@@ -2,8 +2,112 @@
 
 import { useState } from "react";
 import { Send, CheckCircle2 } from "lucide-react";
-import type { CreateReportDTO, DisruptionType, FokontanyOption } from "@/types";
+import type { CreateReportDTO, DisruptionCode, DisruptionType, FokontanyOption } from "@/types";
 import { resolveIcon } from "@/lib/utils";
+
+const FALLBACK_DISRUPTION_TYPES: DisruptionType[] = [
+  {
+    id: "fallback-power",
+    code: "power",
+    label_fr: "Coupure d'électricité",
+    label_mg: "Tsy misy herinaratra",
+    color_bg: "bg-amber-500/15",
+    color_text: "text-amber-400",
+    color_border: "border-amber-500/40",
+    color_dot: "bg-amber-400",
+    icon: "zap",
+    sort_order: 1,
+    created_at: "",
+  },
+  {
+    id: "fallback-water",
+    code: "water",
+    label_fr: "Coupure d'eau",
+    label_mg: "Tsy misy rano",
+    color_bg: "bg-blue-500/15",
+    color_text: "text-blue-400",
+    color_border: "border-blue-500/40",
+    color_dot: "bg-blue-400",
+    icon: "droplets",
+    sort_order: 2,
+    created_at: "",
+  },
+  {
+    id: "fallback-dirty",
+    code: "dirty",
+    label_fr: "Eau sale / polluée",
+    label_mg: "Rano maloto",
+    color_bg: "bg-orange-800/20",
+    color_text: "text-orange-400",
+    color_border: "border-orange-700/40",
+    color_dot: "bg-orange-600",
+    icon: "alert-triangle",
+    sort_order: 3,
+    created_at: "",
+  },
+  {
+    id: "fallback-fuel",
+    code: "fuel",
+    label_fr: "Pénurie de carburant",
+    label_mg: "Tsy ampy solika",
+    color_bg: "bg-orange-500/15",
+    color_text: "text-orange-400",
+    color_border: "border-orange-500/40",
+    color_dot: "bg-orange-400",
+    icon: "fuel",
+    sort_order: 4,
+    created_at: "",
+  },
+  {
+    id: "fallback-road",
+    code: "road",
+    label_fr: "Route bloquée",
+    label_mg: "Lalana tapaka",
+    color_bg: "bg-violet-500/15",
+    color_text: "text-violet-400",
+    color_border: "border-violet-500/40",
+    color_dot: "bg-violet-400",
+    icon: "map-pin",
+    sort_order: 5,
+    created_at: "",
+  },
+  {
+    id: "fallback-internet",
+    code: "internet",
+    label_fr: "Coupure d'internet",
+    label_mg: "Internet tapaka",
+    color_bg: "bg-cyan-500/15",
+    color_text: "text-cyan-400",
+    color_border: "border-cyan-500/40",
+    color_dot: "bg-cyan-400",
+    icon: "globe",
+    sort_order: 6,
+    created_at: "",
+  },
+  {
+    id: "fallback-restored",
+    code: "restored",
+    label_fr: "Service rétabli",
+    label_mg: "Serivisy averina",
+    color_bg: "bg-emerald-500/15",
+    color_text: "text-emerald-400",
+    color_border: "border-emerald-500/40",
+    color_dot: "bg-emerald-400",
+    icon: "check-circle-2",
+    sort_order: 7,
+    created_at: "",
+  },
+];
+
+const TYPE_ORDER: Record<DisruptionCode, number> = {
+  power: 0,
+  water: 1,
+  dirty: 2,
+  fuel: 3,
+  road: 4,
+  internet: 5,
+  restored: 6,
+};
 
 interface Props {
   disruptionTypes: DisruptionType[];
@@ -18,10 +122,15 @@ export default function ReportScreen({
   defaultFokontanyId,
   onSubmit,
 }: Props) {
-  // On exclut "restored" des choix citoyens actifs : géré via le toggle statut.
-  const selectableTypes = disruptionTypes.filter((d) => d.code !== "restored");
+  const allDisruptionTypes = [
+    ...disruptionTypes,
+    ...FALLBACK_DISRUPTION_TYPES.filter((fallback) => !disruptionTypes.some((d) => d.code === fallback.code)),
+  ].sort((a, b) => TYPE_ORDER[a.code] - TYPE_ORDER[b.code]);
 
-  const [cutCode, setCutCode] = useState(selectableTypes[0]?.code ?? "power");
+  // On exclut "restored" des choix citoyens actifs : géré via le toggle statut.
+  const selectableTypes = allDisruptionTypes.filter((d) => d.code !== "restored");
+
+  const [cutCode, setCutCode] = useState<DisruptionCode>(selectableTypes[0]?.code ?? "power");
   const [fokontanyId, setFokontanyId] = useState(defaultFokontanyId || fokontanyOptions[0]?.id || "");
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -31,7 +140,7 @@ export default function ReportScreen({
     const zone = fokontanyOptions.find((f) => f.id === fokontanyId) ?? fokontanyOptions[0];
     if (!zone) return;
 
-    const dt = disruptionTypes.find((d) => d.code === cutCode);
+    const dt = allDisruptionTypes.find((d) => d.code === cutCode);
     // Jitter léger pour éviter que plusieurs reports d'une même zone se superposent exactement.
     const lat = zone.lat + (Math.random() - 0.5) * 0.005;
     const lng = zone.lng + (Math.random() - 0.5) * 0.005;
