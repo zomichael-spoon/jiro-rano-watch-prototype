@@ -69,6 +69,8 @@ export const CUT_LABELS: Record<CutType, string> = {
   water: "Coupure d'eau",
   dirty: "Eau sale / polluée",
   fuel: "Pénurie de carburant",
+  road: "Route bloquée",
+  internet: "Coupure d'internet",
   restored: "Service rétabli",
 };
 
@@ -77,6 +79,8 @@ export const CUT_COLORS: Record<CutType, { bg: string; text: string; border: str
   water:    { bg: "bg-blue-500/15",    text: "text-blue-400",    border: "border-blue-500/40",   dot: "bg-blue-400" },
   dirty:    { bg: "bg-orange-800/20",  text: "text-orange-400",  border: "border-orange-700/40", dot: "bg-orange-600" },
   fuel:     { bg: "bg-orange-500/15",  text: "text-orange-400",  border: "border-orange-500/40", dot: "bg-orange-400" },
+  road:     { bg: "bg-violet-500/15",  text: "text-violet-400",  border: "border-violet-500/40", dot: "bg-violet-400" },
+  internet: { bg: "bg-cyan-500/15",   text: "text-cyan-400",    border: "border-cyan-500/40",   dot: "bg-cyan-400" },
   restored: { bg: "bg-emerald-500/15", text: "text-emerald-400", border: "border-emerald-500/40",dot: "bg-emerald-400" },
 };
 
@@ -85,6 +89,8 @@ export const CUT_ICONS: Record<CutType, string> = {
   water: "Droplets",
   dirty: "AlertTriangle",
   fuel: "Fuel",
+  road: "MapPin",
+  internet: "Globe",
   restored: "CheckCircle2",
 };
 

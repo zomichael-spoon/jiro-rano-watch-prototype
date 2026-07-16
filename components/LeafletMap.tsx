@@ -30,6 +30,8 @@ const MARKER_COLORS: Record<CutType, { fill: string; stroke: string }> = {
   water:    { fill: "#3b82f6", stroke: "#2563eb" },
   dirty:    { fill: "#c2410c", stroke: "#9a3412" },
   fuel:     { fill: "#f97316", stroke: "#ea580c" },
+  road:     { fill: "#8b5cf6", stroke: "#7c3aed" },
+  internet: { fill: "#06b6d4", stroke: "#0891b2" },
   restored: { fill: "#10b981", stroke: "#059669" },
 };
 

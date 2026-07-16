@@ -7,7 +7,7 @@ import {
 } from "@/lib/jiro-data";
 import {
   Zap, Droplets, AlertTriangle, Fuel, CheckCircle2,
-  X, Users, MapPin, Clock, Phone, ChevronRight,
+  X, Users, MapPin, Clock, Phone, ChevronRight, Globe,
 } from "lucide-react";
 
 // ── Lazy-load the actual map (SSR must be off for Leaflet) ──────────────────
@@ -30,10 +30,12 @@ const CUT_ICON: Record<CutType, React.ReactNode> = {
   water:    <Droplets className="h-3.5 w-3.5" />,
   dirty:    <AlertTriangle className="h-3.5 w-3.5" />,
   fuel:     <Fuel className="h-3.5 w-3.5" />,
+  road:     <MapPin className="h-3.5 w-3.5" />,
+  internet: <Globe className="h-3.5 w-3.5" />,
   restored: <CheckCircle2 className="h-3.5 w-3.5" />,
 };
 
-const ALL_TYPES: CutType[] = ["power", "water", "dirty", "fuel", "restored"];
+const ALL_TYPES: CutType[] = ["power", "water", "dirty", "fuel", "road", "internet", "restored"];
 
 export default function MapScreen({ reports, onConfirm }: Props) {
   const [filterType, setFilterType] = useState<CutType | "all">("all");
