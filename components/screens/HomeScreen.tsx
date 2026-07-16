@@ -15,7 +15,7 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Map, ListChecks, PlusCircle, Sparkles, TrendingUp, LogOut, User } from "lucide-react";
+import { Map, ListChecks, PlusCircle, Sparkles, TrendingUp, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { isProfileComplete } from "@/lib/utils";
 import type {
@@ -27,6 +27,7 @@ import type {
   ProfileWithRelations,
   CreateReportDTO,
 } from "@/types";
+import { Activity as ActivityData, UserProfile } from "@/lib/jiro-data";
 import { createReport, confirmReport, upsertProfile } from "@/lib/actions";
 
 import OnboardingScreen from "@/components/screens/OnboardingScreen";
@@ -37,6 +38,7 @@ import AIAdviceScreen from "@/components/screens/AIAdviceScreen";
 import ProviderScreen from "@/components/screens/ProviderScreen";
 import PredictionScreen from "@/components/screens/PredictionScreen";
 import ProfileScreen from "@/components/screens/ProfileScreen";
+import StatusBar from "../StatusBar";
 
 interface Props {
   initialReports: ReportWithRelations[];
@@ -185,6 +187,7 @@ export default function HomeScreen({
 
   return (
     <div className="flex h-dvh flex-col bg-background">
+        <StatusBar reports={reports} profile={{activity: (profile.activity?.label_fr ?? "menage") as ActivityData, fokontany: profile.fokontany_ref?.name ?? ""} as UserProfile} />
       <main className="flex-1 overflow-y-auto">
         {tab === "map" && (<MapScreen reports={reports} disruptionTypes={disruptionTypes} onConfirm={handleConfirm} />)}
         {tab === "feed" && <FeedScreen reports={reports} onUpvote={handleConfirm} />}

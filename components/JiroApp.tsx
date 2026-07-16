@@ -107,7 +107,7 @@ export default function JiroApp() {
       {/* Main scrollable content */}
       <main className="flex-1 flex justify-center items-center overflow-y-auto overscroll-contain min-h-0">
         <div className="h-full max-w-2xl overflow-y-auto overscroll-contain min-h-0">
-          
+
         {loading && screen !== "map" ? (
           <div className="flex items-center justify-center h-full">
             <div className="h-6 w-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
