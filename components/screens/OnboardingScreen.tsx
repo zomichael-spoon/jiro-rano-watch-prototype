@@ -1,50 +1,65 @@
 "use client";
 
 import { useState } from "react";
-import { User, Briefcase, ShieldCheck, Droplets, Zap } from "lucide-react";
-import type { Activity, FokontanyOption, UserRole, UpsertProfileDTO } from "@/types";
+import { User, Briefcase, ShieldCheck, Droplets, Zap, Loader2 } from "lucide-react";
+import type { Activity, UserRole, UpsertProfileDTO, FokontanySelection } from "@/types";
+import { FokontanyCombobox } from "@/components/FokontanyCombobox";
+import { upsertFokontany } from "@/lib/actions";
 
 interface Props {
   activities: Activity[];
-  fokontanyOptions: FokontanyOption[];
-  /** Reçoit le profil déjà construit et gère l'appel à upsertProfile côté HomeScreen. */
   onComplete: (dto: UpsertProfileDTO) => void;
-  userId: string; // fourni par la session Supabase (auth.uid())
+  userId: string;
 }
 
-export default function OnboardingScreen({
-  activities,
-  fokontanyOptions,
-  onComplete,
-  userId,
-}: Props) {
+export default function OnboardingScreen({ activities, onComplete, userId }: Props) {
   const [name, setName] = useState("");
   const [role, setRole] = useState<UserRole>("citizen");
   const [activityCode, setActivityCode] = useState(activities[0]?.code ?? "");
-  const [fokontanyId, setFokontanyId] = useState(fokontanyOptions[0]?.id ?? "");
+  const [fokontanySelection, setFokontanySelection] = useState<FokontanySelection | null>(null);
   const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const selectedFokontany = fokontanyOptions.find((f) => f.id === fokontanyId);
   const selectedActivity = activities.find((a) => a.code === activityCode);
 
-  function handleSubmit() {
-    if (!name.trim()) return;
-    const dto: UpsertProfileDTO = {
-      id: userId,
-      display_name: name.trim(),
-      role,
-      activity_code: activityCode || null,
-      fokontany_id: fokontanyId || null,
-      notes: notes.trim() || null,
-      organization_name: null,
-      is_verified_provider: false,
-      notify_power: true,
-      notify_water: true,
-      notify_fuel: false,
-      notify_dirty: true,
-      avatar_url: null,
-    };
-    onComplete(dto);
+  async function handleSubmit() {
+    if (!name.trim() || !fokontanySelection) return;
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const fokontanyId =
+        fokontanySelection.kind === "existing"
+          ? fokontanySelection.fokontany.id
+          : await upsertFokontany({
+              name: fokontanySelection.name,
+              district: fokontanySelection.district,
+              lat: fokontanySelection.lat,
+              lng: fokontanySelection.lng,
+            });
+
+      const dto: UpsertProfileDTO = {
+        id: userId,
+        display_name: name.trim(),
+        role,
+        activity_code: activityCode || null,
+        fokontany_id: fokontanyId,
+        notes: notes.trim() || null,
+        organization_name: null,
+        is_verified_provider: false,
+        notify_power: true,
+        notify_water: true,
+        notify_fuel: false,
+        notify_dirty: true,
+        avatar_url: null,
+      };
+      onComplete(dto);
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : "Une erreur est survenue.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -136,17 +151,7 @@ export default function OnboardingScreen({
           <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1.5">
             Fokontany (Zone)
           </label>
-          <select
-            className="w-full rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-foreground appearance-none focus:outline-none focus:ring-2 focus:ring-primary/50"
-            value={fokontanyId}
-            onChange={(e) => setFokontanyId(e.target.value)}
-          >
-            {fokontanyOptions.map((f) => (
-              <option key={f.id} value={f.id} className="bg-zinc-900">
-                {f.name}
-              </option>
-            ))}
-          </select>
+          <FokontanyCombobox value={fokontanySelection} onChange={setFokontanySelection} />
         </div>
 
         <div>
@@ -169,7 +174,12 @@ export default function OnboardingScreen({
           <p className="text-xs text-muted-foreground mb-1">Profil actif</p>
           <p className="text-sm font-semibold text-foreground">{name}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {selectedActivity?.label_fr ?? "—"} · {selectedFokontany?.name ?? "—"}
+            {selectedActivity?.label_fr ?? "—"} ·{" "}
+            {fokontanySelection?.kind === "existing"
+              ? fokontanySelection.fokontany.name
+              : fokontanySelection?.kind === "new"
+              ? fokontanySelection.name
+              : "—"}
           </p>
           <span
             className={`mt-2 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
@@ -181,11 +191,14 @@ export default function OnboardingScreen({
         </div>
       )}
 
+      {submitError && <p className="text-sm text-red-400 -mt-2">{submitError}</p>}
+
       <button
         onClick={handleSubmit}
-        disabled={!name.trim()}
-        className="w-full rounded-2xl bg-primary py-4 text-sm font-bold text-primary-foreground transition-opacity active:opacity-80"
+        disabled={!name.trim() || !fokontanySelection || submitting}
+        className="w-full rounded-2xl bg-primary py-4 text-sm font-bold text-primary-foreground transition-opacity active:opacity-80 flex items-center justify-center gap-2"
       >
+        {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
         Continuer
       </button>
     </div>
