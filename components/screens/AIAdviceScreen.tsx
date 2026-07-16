@@ -1,13 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sparkles, Loader2, Droplets, Zap, Phone, BookOpen, Fuel, CheckCircle2 } from "lucide-react";
-import type { ProfileWithRelations, ReportWithRelations, EmergencyContact, DisruptionCode } from "@/types";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeSanitize from "rehype-sanitize";
+import type { ProfileWithRelations, ReportWithRelations, EmergencyContact, DisruptionCode, Activity, FokontanyOption } from "@/types";
 
 interface Props {
   profile: ProfileWithRelations;
   reports: ReportWithRelations[];
   emergencyContacts: EmergencyContact[];
+  activities: Activity[];
+  fokontanyOptions: FokontanyOption[];
 }
 
 interface AdviceBlock {
@@ -212,20 +217,81 @@ function selectContacts(
     .sort((a, b) => a.sort_order - b.sort_order);
 }
 
-export default function AIAdviceScreen({ profile, reports, emergencyContacts }: Props) {
+export default function AIAdviceScreen({
+  profile,
+  reports,
+  emergencyContacts,
+  activities,
+  fokontanyOptions,
+}: Props) {
   const [loading, setLoading] = useState(false);
   const [shown, setShown] = useState(false);
+  const [adviceText, setAdviceText] = useState("");
+  const [error, setError] = useState("");
 
-  function handleGetAdvice() {
+  useEffect(() => {
+    setShown(false);
+    setAdviceText("");
+    setError("");
+    setLoading(false);
+  }, [profile]);
+
+  async function handleGetAdvice() {
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    setError("");
+    setAdviceText("");
+
+    try {
+      const response = await fetch("/api/openrouter", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          profile: {
+            display_name: profile.display_name,
+            role: profile.role,
+            activity_code: profile.activity_code,
+            fokontany_id: profile.fokontany_id,
+            notes: profile.notes,
+            organization_name: profile.organization_name,
+            is_verified_provider: profile.is_verified_provider,
+            notify_power: profile.notify_power,
+            notify_water: profile.notify_water,
+            notify_fuel: profile.notify_fuel,
+            notify_dirty: profile.notify_dirty,
+            avatar_url: profile.avatar_url,
+          },
+          reports: reports.map((r) => ({
+            type: r.type,
+            fokontany: r.fokontany,
+            description: r.description,
+            is_active: r.is_active,
+          })),
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || "Erreur OpenRouter");
+      }
+
+      setAdviceText(data.advice ?? "Aucune réponse reçue.");
       setShown(true);
-    }, 1800);
+    } catch (err) {
+      setError((err as Error).message || "Erreur lors de la requête.");
+      setShown(true);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  const { blocks, activeTypes } = generateAdvice(profile, reports);
+  const { activeTypes } = generateAdvice(profile, reports);
   const contacts = selectContacts(emergencyContacts, activeTypes, profile.fokontany_id);
+
+  const profileDisplayName = profile.display_name || "Utilisateur";
+  const activityLabel = profile.activity?.label_fr ?? profile.activity_code ?? "—";
+  const zoneLabel = profile.fokontany_ref?.name ?? (fokontanyOptions.find((f) => f.id === profile.fokontany_id)?.name ?? "—");
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-4 pb-6">
@@ -236,7 +302,7 @@ export default function AIAdviceScreen({ profile, reports, emergencyContacts }: 
         <div>
           <h2 className="text-sm font-bold text-primary">Conseil IA personnalisé</h2>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            Basé sur votre profil: {profile.display_name || "Utilisateur"} · {profile.fokontany_ref?.name ?? "—"}
+            Basé sur votre profil: {profileDisplayName} · {zoneLabel}
           </p>
         </div>
       </div>
@@ -248,7 +314,7 @@ export default function AIAdviceScreen({ profile, reports, emergencyContacts }: 
         <div>
           <p className="text-xs text-muted-foreground">Profil analysé</p>
           <p className="text-sm font-semibold text-foreground mt-0.5">
-            {profile.activity?.label_fr ?? "—"} · {profile.fokontany_ref?.name ?? "—"}
+            {activityLabel} · {zoneLabel}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {profile.notes ? `Note: ${profile.notes}` : "Aucune note spéciale"}
@@ -260,7 +326,7 @@ export default function AIAdviceScreen({ profile, reports, emergencyContacts }: 
         <button
           onClick={handleGetAdvice}
           disabled={loading}
-          className="flex items-center justify-center gap-2.5 w-full rounded-2xl bg-primary py-4 text-sm font-bold text-primary-foreground transition-opacity active:opacity-80"
+          className="flex items-center justify-center gap-2.5 w-full rounded-2xl bg-primary py-4 text-sm font-bold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {loading ? (
             <>
@@ -286,28 +352,17 @@ export default function AIAdviceScreen({ profile, reports, emergencyContacts }: 
             <div className="h-px flex-1 bg-border" />
           </div>
 
-          {blocks.map((block, i) => (
-            <div key={i} className={`rounded-2xl border ${block.borderClass} ${block.bgClass} p-4 flex flex-col gap-3`}>
-              <div className="flex items-center gap-2">
-                <block.Icon className={`h-4 w-4 ${block.colorClass}`} />
-                <div>
-                  <p className={`text-sm font-bold ${block.colorClass}`}>{block.title}</p>
-                  <p className="text-[11px] text-muted-foreground italic">{block.titleMg}</p>
-                </div>
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <p className="text-sm font-bold text-foreground">Conseil personnalisé</p>
+              <div className="mt-3 text-sm leading-relaxed text-foreground/90 prose prose-invert">
+                {adviceText ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{adviceText}</ReactMarkdown>
+                ) : (
+                  <span>Le service OpenRouter n'a pas retourné de conseils.</span>
+                )}
               </div>
-              <div className="flex flex-col gap-2.5">
-                {block.steps.map((step, j) => (
-                  <div key={j} className="flex gap-2.5">
-                    <div className={`mt-1.5 h-1.5 w-1.5 rounded-full shrink-0 ${block.colorClass.replace("text-", "bg-")}`} />
-                    <div>
-                      <p className="text-sm text-foreground/85 leading-relaxed">{step}</p>
-                      <p className="text-[11px] text-muted-foreground italic mt-0.5 leading-relaxed">{block.stepsMg[j]}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+            {error && <p className="mt-3 text-xs text-destructive">{error}</p>}
+          </div>
 
           {/* Contacts d'urgence — depuis emergency_contacts, filtrés par contexte */}
           <div className="rounded-2xl border border-border bg-card p-4 flex flex-col gap-3">
@@ -336,11 +391,9 @@ export default function AIAdviceScreen({ profile, reports, emergencyContacts }: 
           </div>
 
           <button
-            onClick={() => {
-              setShown(false);
-              setLoading(false);
-            }}
-            className="flex items-center justify-center gap-2 w-full rounded-2xl border border-primary/30 bg-primary/10 py-3 text-sm font-semibold text-primary transition-colors"
+            onClick={handleGetAdvice}
+            disabled={loading}
+            className="flex items-center justify-center gap-2 w-full rounded-2xl border border-primary/30 bg-primary/10 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/5 disabled:opacity-50"
           >
             <Sparkles className="h-3.5 w-3.5" />
             Actualiser le conseil

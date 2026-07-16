@@ -1,7 +1,7 @@
 import {
   Zap, Droplets, AlertTriangle, Fuel, CheckCircle2, type LucideIcon,
 } from "lucide-react";
-import type { DisruptionType, DisruptionCode } from "@/types";
+import type { DisruptionType, DisruptionCode, ProfileWithRelations } from "@/types";
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
@@ -56,4 +56,13 @@ export function timeAgo(isoDate: string): string {
   if (diffD < 7) return `il y a ${diffD}j`;
 
   return new Date(isoDate).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+}
+
+/**
+ * Vérifie si un profil est complet pour bénéficier de la personnalisation et des conseils IA.
+ * Un profil est complet si : display_name, activity_code, et fokontany_id sont remplis.
+ */
+export function isProfileComplete(profile: ProfileWithRelations | null): boolean {
+  if (!profile) return false;
+  return !!(profile.display_name && profile.activity_code && profile.fokontany_id);
 }

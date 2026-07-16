@@ -9,6 +9,7 @@ interface Props {
   fokontanyOptions: FokontanyOption[];
   /** Reçoit le profil déjà construit et gère l'appel à upsertProfile côté HomeScreen. */
   onComplete: (dto: UpsertProfileDTO) => void;
+  onSkip?: () => void; // Optionnel : permet de sauter l'onboarding
   userId: string; // fourni par la session Supabase (auth.uid())
 }
 
@@ -16,6 +17,7 @@ export default function OnboardingScreen({
   activities,
   fokontanyOptions,
   onComplete,
+  onSkip,
   userId,
 }: Props) {
   const [name, setName] = useState("");
@@ -181,13 +183,23 @@ export default function OnboardingScreen({
         </div>
       )}
 
-      <button
-        onClick={handleSubmit}
-        disabled={!name.trim()}
-        className="w-full rounded-2xl bg-primary py-4 text-sm font-bold text-primary-foreground transition-opacity active:opacity-80"
-      >
-        Continuer
-      </button>
+      <div className="flex flex-col gap-2">
+        <button
+          onClick={handleSubmit}
+          disabled={!name.trim()}
+          className="w-full rounded-2xl bg-primary py-4 text-sm font-bold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+        >
+          Continuer
+        </button>
+        {onSkip && (
+          <button
+            onClick={onSkip}
+            className="w-full rounded-2xl border border-border bg-transparent py-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary"
+          >
+            Sauter pour maintenant
+          </button>
+        )}
+      </div>
     </div>
   );
 }

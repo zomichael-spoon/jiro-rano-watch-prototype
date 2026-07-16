@@ -13,8 +13,11 @@
 // ces lookups statiques par `report.disruption_type` (voir ReportWithRelations).
 // ============================================================================
 
-import { useState, useTransition } from "react";
-import { Map, ListChecks, PlusCircle, Sparkles, TrendingUp } from "lucide-react";
+import { useState, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Map, ListChecks, PlusCircle, Sparkles, TrendingUp, LogOut, User } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { isProfileComplete } from "@/lib/utils";
 import type {
   ReportWithRelations,
   FokontanyOption,
@@ -33,6 +36,7 @@ import FeedScreen from "@/components/screens/FeedScreen";
 import AIAdviceScreen from "@/components/screens/AIAdviceScreen";
 import ProviderScreen from "@/components/screens/ProviderScreen";
 import PredictionScreen from "@/components/screens/PredictionScreen";
+import ProfileScreen from "@/components/screens/ProfileScreen";
 
 interface Props {
   initialReports: ReportWithRelations[];
@@ -44,7 +48,7 @@ interface Props {
   userId: string | null;
 }
 
-type Tab = "map" | "feed" | "report" | "advice" | "prediction";
+type Tab = "map" | "feed" | "report" | "advice" | "prediction" | "profile";
 
 export default function HomeScreen({
   initialReports,
@@ -58,7 +62,43 @@ export default function HomeScreen({
   const [reports, setReports] = useState<ReportWithRelations[]>(initialReports);
   const [profile, setProfile] = useState<ProfileWithRelations | null>(initialProfile);
   const [tab, setTab] = useState<Tab>("map");
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const supabase = typeof window === "undefined" ? null : createClient();
+
+  // Vérifier si le profil est complet au chargement et au changement
+  useEffect(() => {
+    if (profile && !isProfileComplete(profile)) {
+      setShowOnboardingModal(true);
+    }
+  }, [profile?.id]); // Dépendance sur profile.id pour éviter les appels répétés
+
+  async function handleLogout() {
+    // Ensure we sign out the browser Supabase client (clears localStorage session)
+    try {
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+    } catch (e) {
+      // ignore client sign-out errors, continue to server-side logout
+    }
+
+    // Notify server to clear auth cookies as well
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+
+      // Redirect to login regardless; server cleared cookies if response.ok
+      router.push("/login");
+      return;
+    } catch (err) {
+      // If network fails, still redirect and refresh app state
+      router.push("/login");
+      return;
+    }
+  }
 
   // Aucune session active : à brancher sur votre écran de connexion Supabase Auth.
   if (!userId) {
@@ -116,14 +156,31 @@ export default function HomeScreen({
     startTransition(async () => {
       const result = await confirmReport({ report_id: reportId, user_id: profile?.id });
       if (!result.success) {
-        // Rollback si l'action serveur échoue.
+        // revert on error
         setReports((prev) =>
           prev.map((r) =>
-            r.id === reportId ? { ...r, confirmations: r.confirmations - 1 } : r,
+            r.id === reportId
+              ? { ...r, confirmations: Math.max(0, r.confirmations - 1) }
+              : r,
           ),
         );
       }
     });
+  }
+
+  /** Update profile via server action */
+  async function handleUpdateProfile(dto: any) {
+    try {
+      const result = await upsertProfile(dto);
+      if (result.success) {
+        const activity = activities.find((a) => a.code === result.data.activity_code) ?? null;
+        setProfile({ ...result.data, activity, fokontany_ref: null });
+      } else {
+        throw new Error("Erreur lors de la mise à jour du profil");
+      }
+    } catch (err) {
+      throw err;
+    }
   }
 
   return (
@@ -149,11 +206,28 @@ export default function HomeScreen({
               onSubmit={(r) => handleCreateReport({ ...r, reporter_id: profile.id })}
             />
           ))}
-        {tab === "advice" && <AIAdviceScreen profile={profile} reports={reports} emergencyContacts={emergencyContacts} />}
+        {tab === "advice" && (
+          <AIAdviceScreen
+            profile={profile}
+            reports={reports}
+            emergencyContacts={emergencyContacts}
+            activities={activities}
+            fokontanyOptions={fokontanyOptions}
+          />
+        )}
         {tab === "prediction" && (<PredictionScreen reports={reports} fokontanyOptions={fokontanyOptions} />)}
+        {tab === "profile" && (
+          <ProfileScreen
+            profile={profile}
+            activities={activities}
+            fokontanyOptions={fokontanyOptions}
+            onUpdate={handleUpdateProfile}
+            onLogout={handleLogout}
+          />
+        )}
       </main>
 
-      {/* Bottom nav — mobile-first, 5 zones tactiles larges */}
+      {/* Bottom nav — mobile-first, 6 zones tactiles larges */}
       <nav className="flex items-center justify-around border-t border-border bg-card px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         <NavButton icon={Map} label="Carte" active={tab === "map"} onClick={() => setTab("map")} />
         <NavButton icon={ListChecks} label="Fil" active={tab === "feed"} onClick={() => setTab("feed")} />
@@ -171,10 +245,43 @@ export default function HomeScreen({
           active={tab === "prediction"}
           onClick={() => setTab("prediction")}
         />
+        <NavButton icon={User} label="Profil" active={tab === "profile"} onClick={() => setTab("profile")} />
       </nav>
 
       {isPending && (
         <div className="pointer-events-none fixed inset-x-0 top-0 h-0.5 animate-pulse bg-primary" />
+      )}
+
+      {/* Onboarding Modal - affichage si le profil n'est pas complet */}
+      {showOnboardingModal && profile && (
+        <div className="fixed inset-0 z-10050 flex items-end bg-black/50 backdrop-blur-sm pointer-events-auto">
+          <div className="w-full max-h-[90vh] overflow-y-auto rounded-t-3xl bg-card animate-in slide-in-from-bottom-5">
+            <div className="flex items-center justify-between sticky top-0 bg-card border-b border-border px-4 py-3 z-10">
+              <h2 className="text-lg font-bold text-foreground">Complétez votre profil</h2>
+              <button
+                onClick={() => setShowOnboardingModal(false)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <OnboardingScreen
+              activities={activities}
+              fokontanyOptions={fokontanyOptions}
+              userId={userId!}
+              onComplete={(dto) => {
+                startTransition(async () => {
+                  const result = await upsertProfile(dto);
+                  if (result.success) {
+                    setProfile({ ...result.data, activity: null, fokontany_ref: null });
+                    setShowOnboardingModal(false);
+                  }
+                });
+              }}
+              onSkip={() => setShowOnboardingModal(false)}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

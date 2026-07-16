@@ -6,6 +6,7 @@
 // typées, au composant d'écran mobile situé dans screens/.
 // ============================================================================
 
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import HomeScreen from "@/components/screens/HomeScreen";
 import type {
@@ -21,6 +22,14 @@ export const revalidate = 30; // 30s : données quasi temps-réel sans surcharge
 
 export default async function Page() {
   const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
 
   // Toutes les requêtes indépendantes sont lancées en parallèle.
   const [
@@ -59,10 +68,6 @@ export default async function Page() {
   const disruptionTypes = (disruptionTypesRes.data ?? []) as DisruptionType[];
   const activities = (activitiesRes.data ?? []) as Activity[];
   const emergencyContacts = (emergencyContactsRes.data ?? []) as EmergencyContact[];
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   return (
     <HomeScreen

@@ -38,7 +38,7 @@ export default function JiroApp() {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const supabase = createClient();
+  const supabase = typeof window === "undefined" ? null : createClient();
 
   // ── Fetch all reports ───────────────────────────────────────────────────────
   const fetchReports = useCallback(async () => {
@@ -51,6 +51,7 @@ export default function JiroApp() {
   }, []);
 
   useEffect(() => {
+    if (!supabase) return;
     fetchReports();
 
     // Real-time subscription: refresh on any change

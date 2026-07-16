@@ -26,6 +26,15 @@ export default function PwaInstaller() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
+    // Service workers require a secure context and a valid certificate when
+    // accessed via network IPs. Avoid attempting registration in insecure
+    // contexts (self-signed certs for LAN IPs will fail). Localhost is
+    // considered secure by browsers even over HTTP, so it's allowed.
+    if (!window.isSecureContext) {
+      console.warn("[JiroRano] SW registration skipped: insecure context");
+      return;
+    }
+
     navigator.serviceWorker
       .register("/sw.js", { scope: "/" })
       .then((reg) => {
