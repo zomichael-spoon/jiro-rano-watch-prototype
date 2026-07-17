@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import axios from "axios";
 import { Check, ChevronsUpDown, MapPin } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -47,20 +48,23 @@ export function FokontanyCombobox({ value, onChange }: Props) {
   const fetchSuggestions = async (input: string) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        key: process.env.NEXT_PUBLIC_LOCATION_API_KEY!,
-        q: input,
-        limit: "5",
-      });
+      const locationUrl = process.env.NEXT_PUBLIC_LOCATION_URL;
+      const locationApiKey = process.env.NEXT_PUBLIC_LOCATION_API_KEY;
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_LOCATION_URL}?${params}`);
-
-      if (!response.ok) {
-        throw new Error(`LocationIQ a répondu avec le statut ${response.status}`);
+      if (!locationUrl || !locationApiKey) {
+        console.warn("LocationIQ env vars are missing. Please set NEXT_PUBLIC_LOCATION_URL and NEXT_PUBLIC_LOCATION_API_KEY.");
+        setSuggestions([]);
+        return;
       }
 
-      const data: LocationIQSuggestion[] = await response.json();
-
+      const response = await axios.get<LocationIQSuggestion[]>(locationUrl, {
+        params: {
+          key: locationApiKey,
+          q: input,
+          limit: "5",
+        }
+      });
+      const data = response.data as LocationIQSuggestion[];
       // On garde uniquement les résultats où on peut déduire un nom de fokontany
       const filtered = data.filter((s) => extractFokontanyDistrict(s).fokontany);
       setSuggestions(filtered);
@@ -108,12 +112,11 @@ export function FokontanyCombobox({ value, onChange }: Props) {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger>
-        <button
-          type="button"
+      <PopoverTrigger asChild className="w-full">
+        <div
           role="combobox"
           aria-expanded={open}
-          className="w-full rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-foreground flex items-center justify-between gap-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
+          className="w-full rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-foreground flex items-center justify-between gap-2 focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer"
         >
           <span className="flex items-center gap-2 truncate">
             <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -122,10 +125,10 @@ export function FokontanyCombobox({ value, onChange }: Props) {
             </span>
           </span>
           <ChevronsUpDown className="h-4 w-4 text-muted-foreground shrink-0 opacity-50" />
-        </button>
+        </div>
       </PopoverTrigger>
 
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 bg-zinc-900 border-border">
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 bg-zinc-900 border-border z-50">
         <Command shouldFilter={false}>
           <CommandInput
             placeholder="Nom du lieu, quartier..."

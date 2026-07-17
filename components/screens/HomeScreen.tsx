@@ -257,7 +257,7 @@ export default function HomeScreen({
 
       {/* Onboarding Modal - affichage si le profil n'est pas complet */}
       {showOnboardingModal && profile && (
-        <div className="fixed inset-0 z-10050 flex items-end bg-black/50 backdrop-blur-sm pointer-events-auto">
+        <div className="fixed inset-0 z-10 flex items-end bg-black/50 backdrop-blur-sm pointer-events-auto">
           <div className="w-full max-h-[90vh] overflow-y-auto rounded-t-3xl bg-card animate-in slide-in-from-bottom-5">
             <div className="flex items-center justify-between sticky top-0 bg-card border-b border-border px-4 py-3 z-10">
               <h2 className="text-lg font-bold text-foreground">Complétez votre profil</h2>

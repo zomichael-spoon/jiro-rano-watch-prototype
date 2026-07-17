@@ -20,3 +20,6 @@ yarn.lock
 next-env.d.ts
 certificates
 tsconfig.tsbuildinfo
+
+build/
+

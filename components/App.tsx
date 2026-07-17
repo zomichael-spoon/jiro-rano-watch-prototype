@@ -18,7 +18,7 @@ import type {
   ProfileWithRelations,
 } from "@/types";
 
-export const revalidate = 30; // 30s : données quasi temps-réel sans surcharger la DB
+export const revalidate = 2; // 30s : données quasi temps-réel sans surcharger la DB
 
 export default async function Page() {
   const supabase = await createClient();

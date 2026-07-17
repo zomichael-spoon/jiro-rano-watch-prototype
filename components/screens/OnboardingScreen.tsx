@@ -14,21 +14,6 @@ interface Props {
   userId: string; // fourni par la session Supabase (auth.uid())
 }
 
-// export default function OnboardingScreen({
-//   activities,
-//   fokontanyOptions,
-//   onComplete,
-//   onSkip,
-//   userId,
-// }: Props) {
-//   const [name, setName] = useState("");
-//   const [role, setRole] = useState<UserRole>("citizen");
-//   const [activityCode, setActivityCode] = useState(activities[0]?.code ?? "");
-//   const [ville, setVille] = useState<string>(fokontanyOptions[0]?.district ?? "");
-//   const [fokontanyId, setFokontanyId] = useState(fokontanyOptions[0]?.id ?? "");
-//   userId: string;
-// }
-
 export default function OnboardingScreen({ activities, fokontanyOptions, onComplete, userId, onSkip }: Props) {
   const [name, setName] = useState("");
   const [role, setRole] = useState<UserRole>("citizen");

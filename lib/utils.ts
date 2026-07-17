@@ -1,20 +1,11 @@
-<<<<<<< HEAD
-import {
-  Zap, Droplets, AlertTriangle, Fuel, CheckCircle2, Globe, MapPin, type LucideIcon,
-} from "lucide-react";
-import type { DisruptionType, DisruptionCode, ProfileWithRelations } from "@/types";
-import { clsx, type ClassValue } from 'clsx'
-import { twMerge } from 'tailwind-merge'
-=======
+import { DisruptionCode, DisruptionType, ProfileWithRelations } from "@/types";
 import { clsx, type ClassValue } from "clsx"
+import { AlertTriangle, CheckCircle2, Droplets, Fuel, Globe, LucideIcon, MapPin, Zap } from "lucide-react";
 import { twMerge } from "tailwind-merge"
->>>>>>> fix
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
-<<<<<<< HEAD
-
 
 // ============================================================================
 // lib/utils.ts
@@ -74,5 +65,4 @@ export function isProfileComplete(profile: ProfileWithRelations | null): boolean
   if (!profile) return false;
   return !!(profile.display_name && profile.activity_code && profile.fokontany_id && profile.ville);
 }
-=======
->>>>>>> fix
+
