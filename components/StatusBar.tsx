@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useModeAnimation, ThemeAnimationType } from 'react-theme-switch-animation'
 import { UserProfile, Report } from "@/lib/jiro-data";
-import { Zap, Droplets, ShieldCheck, User, Wifi } from "lucide-react";
+import { Zap, Droplets, ShieldCheck, User, Wifi, Moon, Sun } from "lucide-react";
 
 interface Props {
   profile: UserProfile;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function StatusBar({ profile, reports }: Props) {
+  const { ref, toggleSwitchTheme, isDarkMode } = useModeAnimation({ animationType: ThemeAnimationType.BLUR_CIRCLE });
   const activeCount = reports.filter((r) => r.is_active).length;
   const powerDown = reports.some((r) => r.is_active && r.type === "power");
   const waterDown = reports.some((r) => r.is_active && (r.type === "water" || r.type === "dirty"));
@@ -53,7 +55,13 @@ export default function StatusBar({ profile, reports }: Props) {
       </div>
 
       {/* Center: live status dots */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-4">
+        <div 
+        className="flex items-center gap-1 mr-4 border border-border rounded-md bg-accent/10 px-2 py-2 text-[11px] font-semibold text-foreground cursor-pointer"
+         onClick={toggleSwitchTheme}
+        >
+        {isDarkMode ? (<Moon className="h-4 w-4" />) : (<Sun className="h-4 w-4" />)}
+        </div>
         <div className="flex items-center gap-1">
           <span
             className={`h-1.5 w-1.5 rounded-full ${
