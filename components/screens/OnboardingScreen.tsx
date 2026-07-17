@@ -1,16 +1,57 @@
 "use client";
 
-import { UserProfile, Role, Activity, ACTIVITIES, FOKONTANY } from "@/lib/jiro-data";
+import { useState } from "react";
 import { User, Briefcase, ShieldCheck, Droplets, Zap } from "lucide-react";
+import type { Activity, FokontanyOption, UserRole, UpsertProfileDTO } from "@/types";
 
 interface Props {
-  profile: UserProfile;
-  onChange: (p: UserProfile) => void;
+  activities: Activity[];
+  fokontanyOptions: FokontanyOption[];
+  /** Reçoit le profil déjà construit et gère l'appel à upsertProfile côté HomeScreen. */
+  onComplete: (dto: UpsertProfileDTO) => void;
+  onSkip?: () => void; // Optionnel : permet de sauter l'onboarding
+  userId: string; // fourni par la session Supabase (auth.uid())
 }
 
-export default function OnboardingScreen({ profile, onChange }: Props) {
-  const set = (key: keyof UserProfile, val: string) =>
-    onChange({ ...profile, [key]: val });
+export default function OnboardingScreen({
+  activities,
+  fokontanyOptions,
+  onComplete,
+  onSkip,
+  userId,
+}: Props) {
+  const [name, setName] = useState("");
+  const [role, setRole] = useState<UserRole>("citizen");
+  const [activityCode, setActivityCode] = useState(activities[0]?.code ?? "");
+  const [ville, setVille] = useState<string>(fokontanyOptions[0]?.district ?? "");
+  const [fokontanyId, setFokontanyId] = useState(fokontanyOptions[0]?.id ?? "");
+  const [notes, setNotes] = useState("");
+
+  const selectedFokontany = fokontanyOptions.find((f) => f.id === fokontanyId);
+  const selectedActivity = activities.find((a) => a.code === activityCode);
+  const villes = Array.from(new Set(fokontanyOptions.map((f) => f.district).filter(Boolean as any))) as string[];
+  const fokontanyFiltered = ville ? fokontanyOptions.filter((f) => f.district === ville) : fokontanyOptions;
+
+  function handleSubmit() {
+    if (!name.trim()) return;
+    const dto: UpsertProfileDTO = {
+      id: userId,
+      display_name: name.trim(),
+      role,
+      activity_code: activityCode || null,
+      ville: ville || null,
+      fokontany_id: fokontanyId || null,
+      notes: notes.trim() || null,
+      organization_name: null,
+      is_verified_provider: false,
+      notify_power: true,
+      notify_water: true,
+      notify_fuel: false,
+      notify_dirty: true,
+      avatar_url: null,
+    };
+    onComplete(dto);
+  }
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-4 pb-6">
@@ -38,12 +79,12 @@ export default function OnboardingScreen({ profile, onChange }: Props) {
           Mon rôle / Ny andraikitro
         </label>
         <div className="grid grid-cols-2 gap-3">
-          {(["citizen", "provider"] as Role[]).map((r) => {
-            const active = profile.role === r;
+          {(["citizen", "provider"] as const).map((r) => {
+            const active = role === r;
             return (
               <button
                 key={r}
-                onClick={() => set("role", r)}
+                onClick={() => setRole(r)}
                 className={`flex flex-col items-center gap-2 rounded-2xl border p-4 transition-all ${
                   active
                     ? r === "citizen"
@@ -52,14 +93,8 @@ export default function OnboardingScreen({ profile, onChange }: Props) {
                     : "border-border bg-card text-muted-foreground"
                 }`}
               >
-                {r === "citizen" ? (
-                  <User className="h-5 w-5" />
-                ) : (
-                  <ShieldCheck className="h-5 w-5" />
-                )}
-                <span className="text-sm font-semibold">
-                  {r === "citizen" ? "Citoyen" : "Prestataire"}
-                </span>
+                {r === "citizen" ? <User className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
+                <span className="text-sm font-semibold">{r === "citizen" ? "Citoyen" : "Prestataire"}</span>
                 <span className="text-[11px] opacity-70 text-center leading-tight">
                   {r === "citizen" ? "Signaler / Manolotra" : "JIRAMA / Autorité"}
                 </span>
@@ -76,10 +111,10 @@ export default function OnboardingScreen({ profile, onChange }: Props) {
             Anarana (Nom)
           </label>
           <input
-            className="w-full rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
             placeholder="Ex: Tiana Rakoto"
-            value={profile.name}
-            onChange={(e) => set("name", e.target.value)}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
           />
         </div>
 
@@ -91,12 +126,12 @@ export default function OnboardingScreen({ profile, onChange }: Props) {
             <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <select
               className="w-full rounded-xl border border-border bg-secondary pl-10 pr-4 py-3 text-sm text-foreground appearance-none focus:outline-none focus:ring-2 focus:ring-primary/50"
-              value={profile.activity}
-              onChange={(e) => set("activity", e.target.value as Activity)}
+              value={activityCode}
+              onChange={(e) => setActivityCode(e.target.value)}
             >
-              {(Object.keys(ACTIVITIES) as Activity[]).map((a) => (
-                <option key={a} value={a} className="bg-zinc-900">
-                  {ACTIVITIES[a]}
+              {activities.map((a) => (
+                <option key={a.code} value={a.code} className="bg-zinc-900">
+                  {a.label_fr}
                 </option>
               ))}
             </select>
@@ -105,16 +140,35 @@ export default function OnboardingScreen({ profile, onChange }: Props) {
 
         <div>
           <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1.5">
+            Ville
+          </label>
+          <select
+            className="w-full rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-foreground appearance-none focus:outline-none focus:ring-2 focus:ring-primary/50 mb-2"
+            value={ville}
+            onChange={(e) => {
+              setVille(e.target.value);
+              setFokontanyId("");
+            }}
+          >
+            <option value="">— Choisir une ville —</option>
+            {villes.map((v) => (
+              <option key={v} value={v} className="bg-zinc-900">
+                {v}
+              </option>
+            ))}
+          </select>
+
+          <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1.5">
             Fokontany (Zone)
           </label>
           <select
             className="w-full rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-foreground appearance-none focus:outline-none focus:ring-2 focus:ring-primary/50"
-            value={profile.fokontany}
-            onChange={(e) => set("fokontany", e.target.value)}
+            value={fokontanyId}
+            onChange={(e) => setFokontanyId(e.target.value)}
           >
-            {FOKONTANY.map((f) => (
-              <option key={f} value={f} className="bg-zinc-900">
-                {f}
+            {fokontanyFiltered.map((f) => (
+              <option key={f.id} value={f.id} className="bg-zinc-900">
+                {f.name}
               </option>
             ))}
           </select>
@@ -125,34 +179,50 @@ export default function OnboardingScreen({ profile, onChange }: Props) {
             Remarques spéciales
           </label>
           <textarea
-            className="w-full rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+            className="w-full rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
             rows={3}
             placeholder="Informations supplémentaires sur votre situation..."
-            value={profile.notes}
-            onChange={(e) => set("notes", e.target.value)}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
           />
         </div>
       </section>
 
       {/* Summary card */}
-      {profile.name && (
+      {name && (
         <div className="rounded-2xl border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground mb-1">Profil actif</p>
-          <p className="text-sm font-semibold text-foreground">{profile.name}</p>
+          <p className="text-sm font-semibold text-foreground">{name}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {ACTIVITIES[profile.activity]} · {profile.fokontany}
+            {selectedActivity?.label_fr ?? "—"} · {selectedFokontany?.name ?? "—"}
           </p>
           <span
             className={`mt-2 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-              profile.role === "citizen"
-                ? "bg-amber-500/15 text-amber-400"
-                : "bg-blue-500/15 text-blue-400"
+              role === "citizen" ? "bg-amber-500/15 text-amber-400" : "bg-blue-500/15 text-blue-400"
             }`}
           >
-            {profile.role === "citizen" ? "Citoyen" : "Prestataire"}
+            {role === "citizen" ? "Citoyen" : "Prestataire"}
           </span>
         </div>
       )}
+
+      <div className="flex flex-col gap-2">
+        <button
+          onClick={handleSubmit}
+          disabled={!name.trim()}
+          className="w-full rounded-2xl bg-primary py-4 text-sm font-bold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+        >
+          Continuer
+        </button>
+        {onSkip && (
+          <button
+            onClick={onSkip}
+            className="w-full rounded-2xl border border-border bg-transparent py-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary"
+          >
+            Sauter pour maintenant
+          </button>
+        )}
+      </div>
     </div>
   );
 }

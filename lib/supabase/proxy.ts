@@ -13,10 +13,6 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
-          );
-          supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options),
           );
@@ -25,8 +21,24 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // Required: keep the session refreshed on every request.
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const url = new URL(request.url);
+  const isAuthPage =
+    url.pathname === "/login" ||
+    url.pathname === "/signup" ||
+    url.pathname.startsWith("/api/auth");
+  const isApiRoute = url.pathname.startsWith("/api");
+
+  if (!user && !isAuthPage && !isApiRoute) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  if (user && isAuthPage) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
 
   return supabaseResponse;
 }

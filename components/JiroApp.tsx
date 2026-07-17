@@ -38,7 +38,7 @@ export default function JiroApp() {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const supabase = createClient();
+  const supabase = typeof window === "undefined" ? null : createClient();
 
   // ── Fetch all reports ───────────────────────────────────────────────────────
   const fetchReports = useCallback(async () => {
@@ -51,6 +51,7 @@ export default function JiroApp() {
   }, []);
 
   useEffect(() => {
+    if (!supabase) return;
     fetchReports();
 
     // Real-time subscription: refresh on any change
@@ -91,19 +92,22 @@ export default function JiroApp() {
   }
 
   return (
-    <div className="flex flex-col h-dvh max-h-dvh bg-background overflow-hidden">
+    <div className="flex min-h-dvh w-full items-start justify-center bg-background">
+      <div className="flex h-dvh max-h-dvh w-full max-w-5xl flex-col overflow-hidden bg-background">
       {/* Top status bar */}
       <StatusBar profile={profile} reports={reports} />
 
       {/* Screen title */}
-      <div className="flex-shrink-0 px-4 pt-3 pb-1 border-b border-border/50">
+      <div className="shrink-0 px-4 pt-3 pb-1 border-b border-border/50">
         <h1 className="text-base font-bold text-foreground text-balance">
           {screenTitles[screen]}
         </h1>
       </div>
 
       {/* Main scrollable content */}
-      <main className="flex-1 overflow-y-auto overscroll-contain min-h-0">
+      <main className="flex-1 flex justify-center items-center overflow-y-auto overscroll-contain min-h-0">
+        <div className="h-full max-w-2xl overflow-y-auto overscroll-contain min-h-0">
+
         {loading && screen !== "map" ? (
           <div className="flex items-center justify-center h-full">
             <div className="h-6 w-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
@@ -114,7 +118,7 @@ export default function JiroApp() {
               <OnboardingScreen profile={profile} onChange={setProfile} />
             )}
             {screen === "map" && (
-              <div className="relative h-full">
+              <div className="relative h-full max-w-screen">
                 <MapScreen reports={reports} onConfirm={confirmReport} />
               </div>
             )}
@@ -135,6 +139,7 @@ export default function JiroApp() {
             )}
           </>
         )}
+        </div>
       </main>
 
       {/* Bottom navigation */}
@@ -144,6 +149,7 @@ export default function JiroApp() {
         onChange={setScreen}
         reportCount={reports.filter((r) => r.is_active).length}
       />
+      </div>
     </div>
   );
 }
