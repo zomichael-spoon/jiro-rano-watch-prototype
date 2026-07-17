@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useModeAnimation, ThemeAnimationType } from 'react-theme-switch-animation'
 import { UserProfile, Report } from "@/lib/jiro-data";
-import { Zap, Droplets, ShieldCheck, User, Wifi } from "lucide-react";
+import { Zap, Droplets, ShieldCheck, User, Wifi, Moon, Sun } from "lucide-react";
 
 interface Props {
   profile: UserProfile;
@@ -10,6 +11,9 @@ interface Props {
 }
 
 export default function StatusBar({ profile, reports }: Props) {
+  const { ref: toggleRef, toggleSwitchTheme, isDarkMode } = useModeAnimation({
+    animationType: ThemeAnimationType.BLUR_CIRCLE, //
+  });
   const activeCount = reports.filter((r) => r.is_active).length;
   const powerDown = reports.some((r) => r.is_active && r.type === "power");
   const waterDown = reports.some((r) => r.is_active && (r.type === "water" || r.type === "dirty"));
@@ -26,10 +30,11 @@ export default function StatusBar({ profile, reports }: Props) {
   }, []);
 
   return (
-    <header className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-border bg-background/95 backdrop-blur-sm z-20">
+    <header className="w-full flex items-center justify-between px-4 pt-3 pb-2 border-b border-border bg-background/95 backdrop-blur-sm z-20">
       {/* Left: App name + role */}
+      <div className="w-full max-w-5xl flex items-center justify-between gap-2 mx-auto">
       <div className="flex items-center gap-2">
-        <div>
+        <div className="flex flex-col items-center gap-2">
           <span className="text-[13px] font-bold text-foreground tracking-tight">JiroRano</span>
           <span
             className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase ${
@@ -52,7 +57,14 @@ export default function StatusBar({ profile, reports }: Props) {
       </div>
 
       {/* Center: live status dots */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-4">
+        <button 
+        className="flex items-center gap-1 mr-4 border border-border rounded-md bg-accent/10 px-2 py-2 text-[11px] font-semibold text-foreground cursor-pointer"
+         onClick={toggleSwitchTheme}
+        ref={toggleRef}
+        >
+        {isDarkMode ? (<Moon className="h-4 w-4" />) : (<Sun className="h-4 w-4" />)}
+        </button>
         <div className="flex items-center gap-1">
           <span
             className={`h-1.5 w-1.5 rounded-full ${
@@ -74,6 +86,7 @@ export default function StatusBar({ profile, reports }: Props) {
             {activeCount}
           </span>
         )}
+      </div>
       </div>
     </header>
   );

@@ -5,6 +5,9 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Report, CutType } from "@/lib/jiro-data";
 import { ReportWithRelations } from "@/types";
+import { useModeAnimation, ThemeAnimationType } from "react-theme-switch-animation"; //
+import { Sun, Moon } from "lucide-react"; // Import some theme toggle icons
+import { Button } from "@/components/ui/button";
 
 // ── Fix Leaflet default icon paths broken by bundlers ──────────────────────
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -14,18 +17,14 @@ L.Icon.Default.mergeOptions({
   shadowUrl:     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-// ── Madagascar geographic bounds ───────────────────────────────────────────
-// SW: -25.6, 43.2  |  NE: -11.9, 50.5
 const MADAGASCAR_BOUNDS = L.latLngBounds(
   L.latLng(-25.6, 43.2),
   L.latLng(-11.9, 50.5),
 );
 
-// Center on Antananarivo
 const TANA_CENTER: L.LatLngTuple = [-18.9101, 47.5362];
 const INITIAL_ZOOM = 13;
 
-// ── Marker color map ───────────────────────────────────────────────────────
 const MARKER_COLORS: Record<CutType, { fill: string; stroke: string }> = {
   power:    { fill: "#f59e0b", stroke: "#d97706" },
   water:    { fill: "#3b82f6", stroke: "#2563eb" },
@@ -116,24 +115,34 @@ export function getCurrentCoordinates(timeoutMs: number = 10000): Promise<GeoCoo
 export default function LeafletMap({ reports, onMarkerClick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef       = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null); // Keep a direct reference to the tile layer
 
-  // 1. CHANGE: Use state instead of a ref for the layer group
   const [mapLayer, setMapLayer] = useState<L.LayerGroup | null>(null);
-
   const [center, setCenter] = useState<L.LatLngTuple>(TANA_CENTER);
-  const [located, setLocated] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
 
+  // 1. Initialize React Theme Switch Animation
+  // We'll use the CIRCLE animation type, which shoots a beautiful ripple outward from the button
+  const { ref: toggleRef, toggleSwitchTheme, isDarkMode } = useModeAnimation({
+    animationType: ThemeAnimationType.BLUR_CIRCLE, //
+  });
+
+  // Coordinates retrieval on mount
   useEffect(() => {
     getCurrentCoordinates(10000)
       .then((coords) => {
         setCenter([coords.latitude, coords.longitude]);
-        setLocated(true);
+        setMapReady(true);
+      })
+      .catch((error) => {
+        console.warn("Geolocation failed or was denied:", error.message);
+        setMapReady(true); 
       });
   }, []);
 
-  // ── Initialize map once ──────────────────────────────────────────────────
+  // 2. Initialize Leaflet Map
   useEffect(() => {
-    if (!containerRef.current || mapRef.current || !located) return;
+    if (!containerRef.current || mapRef.current || !mapReady) return;
 
     const map = L.map(containerRef.current, {
       center: center,
@@ -146,32 +155,45 @@ export default function LeafletMap({ reports, onMarkerClick }: Props) {
       attributionControl: true,
     });
 
-    L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-      {
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-        subdomains: "abcd",
-        maxZoom: 20,
-      },
-    ).addTo(map);
+    // Create the tile layer with a URL based on the initial theme
+    const initialTileUrl = isDarkMode
+      ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+      : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+
+    const tileLayer = L.tileLayer(initialTileUrl, {
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      subdomains: "abcd",
+      maxZoom: 20,
+    }).addTo(map);
 
     mapRef.current = map;
+    tileLayerRef.current = tileLayer;
 
-    // 2. CHANGE: Create the layer group and save it to state
     const layerGroup = L.layerGroup().addTo(map);
     setMapLayer(layerGroup);
 
     return () => {
       map.remove();
       mapRef.current = null;
-      setMapLayer(null); // Clean up state
+      tileLayerRef.current = null;
+      setMapLayer(null);
     };
-  }, [located, center]);
+  }, [mapReady, center]);
 
-  // ── Sync markers when reports OR mapLayer change ──────────────────────────
+  // 3. Hot-Swap Tile Layer when "isDarkMode" toggles
   useEffect(() => {
-    // 3. CHANGE: We now depend on mapLayer (state), which guarantees this fires
-    // the exact moment the map layer is created!
+    if (!tileLayerRef.current) return;
+
+    const newTileUrl = isDarkMode
+      ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+      : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+
+    // Smoothly updates tile templates on-the-fly without rebuilding the map view
+    tileLayerRef.current.setUrl(newTileUrl);
+  }, [isDarkMode]);
+
+  // 4. Sync Markers
+  useEffect(() => {
     if (!mapLayer) return;
 
     mapLayer.clearLayers();
@@ -182,14 +204,35 @@ export default function LeafletMap({ reports, onMarkerClick }: Props) {
       marker.on("click", () => onMarkerClick(report));
       marker.addTo(mapLayer);
     });
-
-    // Clean dependency array containing no refs
   }, [reports, onMarkerClick, mapLayer]);
+
   return (
-    <div
-      ref={containerRef}
-      className="h-full w-full z-1"
-      style={{ background: "#0f1117" }}
-    />
+    <div className="relative h-full w-full">
+      {/* The actual Leaflet Map Div */}
+      <div
+        ref={containerRef}
+        className="h-full w-full z-1 transition-colors duration-500 ease-in-out"
+        // Swapping background styles dynamically to prevent grey flashes during the View Transition
+        style={{ background: isDarkMode ? "#0f1117" : "#f1f5f9" }}
+      />
+
+      {/* Floating Theme Switch Controller Button */}
+      <div className="absolute top-4 right-4 z-[1000]">
+          <Button
+            ref={toggleRef} //
+          onClick={toggleSwitchTheme} //
+          size="icon"
+          variant="secondary"
+          className="rounded-full shadow-lg h-10 w-10 flex items-center justify-center bg-card text-card-foreground border hover:bg-muted"
+          aria-label="Toggle Theme"
+        >
+          {isDarkMode ? (
+            <Sun className="h-5 w-5 text-amber-500" />
+          ) : (
+            <Moon className="h-5 w-5 text-indigo-500" />
+          )}
+        </Button>
+      </div>
+    </div>
   );
 }

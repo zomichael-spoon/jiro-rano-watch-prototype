@@ -186,13 +186,21 @@ export default function HomeScreen({
   }
 
   return (
-    <div className="flex h-dvh flex-col bg-background">
-        <StatusBar reports={reports} profile={{activity: (profile.activity?.label_fr ?? "menage") as ActivityData, fokontany: profile.fokontany_ref?.name ?? ""} as UserProfile} />
-      <main className="flex-1 overflow-y-auto">
+    <div className="flex items-center justify-center h-dvh flex-col bg-background overflow-hidden">
+    <StatusBar 
+      reports={reports} 
+      profile={{
+        activity: (profile.activity?.label_fr ?? "menage") as ActivityData, 
+        fokontany: profile.fokontany_ref?.name ?? ""
+      } as UserProfile} 
+    />
+    
+    <main className="flex-1 overflow-y-auto flex flex-col justify-start items-center overscroll-contain min-h-0">
+      <div className="flex flex-1 w-full max-w-2xl flex-col overflow-hidden bg-background">
         {tab === "map" && (<MapScreen reports={reports} disruptionTypes={disruptionTypes} onConfirm={handleConfirm} />)}
         {tab === "feed" && <FeedScreen reports={reports} onUpvote={handleConfirm} />}
-        {tab === "report" &&
-          (profile.role === "provider" ? (
+        {tab === "report" && (
+          profile.role === "provider" ? (
             <ProviderScreen
               defaultHotline=""
               disruptionTypes={disruptionTypes}
@@ -208,7 +216,8 @@ export default function HomeScreen({
               fokontanyOptions={fokontanyOptions}
               onSubmit={(r) => handleCreateReport({ ...r, reporter_id: profile.id })}
             />
-          ))}
+          )
+        )}
         {tab === "advice" && (
           <AIAdviceScreen
             profile={profile}
@@ -228,10 +237,11 @@ export default function HomeScreen({
             onLogout={handleLogout}
           />
         )}
-      </main>
+      </div>
+    </main>
 
       {/* Bottom nav — mobile-first, 6 zones tactiles larges */}
-      <nav className="flex items-center justify-around border-t border-border bg-card px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+      <nav className="w-full max-w-2xl flex items-center justify-between border-t border-border bg-card px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         <NavButton icon={Map} label="Carte" active={tab === "map"} onClick={() => setTab("map")} />
         <NavButton icon={ListChecks} label="Fil" active={tab === "feed"} onClick={() => setTab("feed")} />
         <NavButton

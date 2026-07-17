@@ -62,7 +62,7 @@ export default function FeedScreen({ reports, onUpvote }: Props) {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <div className="rounded-lg p-1.5 shrink-0 bg-black/20">
+                  <div className="rounded-lg p-1.5 shrink-0 bg-background/80">
                     {Icon && <Icon className={`h-3.5 w-3.5 ${dt?.color_text ?? ""}`} />}
                   </div>
                   <div className="min-w-0">
