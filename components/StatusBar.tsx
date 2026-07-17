@@ -11,7 +11,9 @@ interface Props {
 }
 
 export default function StatusBar({ profile, reports }: Props) {
-  const { ref, toggleSwitchTheme, isDarkMode } = useModeAnimation({ animationType: ThemeAnimationType.BLUR_CIRCLE });
+  const { ref: toggleRef, toggleSwitchTheme, isDarkMode } = useModeAnimation({
+    animationType: ThemeAnimationType.BLUR_CIRCLE, //
+  });
   const activeCount = reports.filter((r) => r.is_active).length;
   const powerDown = reports.some((r) => r.is_active && r.type === "power");
   const waterDown = reports.some((r) => r.is_active && (r.type === "water" || r.type === "dirty"));
@@ -56,12 +58,13 @@ export default function StatusBar({ profile, reports }: Props) {
 
       {/* Center: live status dots */}
       <div className="flex items-center gap-4">
-        <div 
+        <button 
         className="flex items-center gap-1 mr-4 border border-border rounded-md bg-accent/10 px-2 py-2 text-[11px] font-semibold text-foreground cursor-pointer"
          onClick={toggleSwitchTheme}
+        ref={toggleRef}
         >
         {isDarkMode ? (<Moon className="h-4 w-4" />) : (<Sun className="h-4 w-4" />)}
-        </div>
+        </button>
         <div className="flex items-center gap-1">
           <span
             className={`h-1.5 w-1.5 rounded-full ${
