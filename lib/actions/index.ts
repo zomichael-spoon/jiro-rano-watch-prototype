@@ -20,6 +20,7 @@ import type {
   Report,
   Profile,
   News,
+  Fokontany,
 } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -278,4 +279,74 @@ function toErrorMessage(err: unknown): string {
     return String((err as { message: unknown }).message);
   }
   return "Une erreur inattendue est survenue.";
+}
+
+/**
+ * Recherche des fokontany existants par nom (utilisé par le combobox, debounced).
+ */
+export async function searchFokontany(query: string): Promise<Fokontany[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("fokontany")
+    .select("*")
+    .ilike("name", `%${q}%`)
+    .order("name", { ascending: true })
+    .limit(8);
+
+  if (error) {
+    console.error("searchFokontany:", error.message);
+    return [];
+  }
+  return data ?? [];
+}
+
+interface UpsertFokontanyInput {
+  name: string;
+  district: string;
+  lat: number;
+  lng: number;
+}
+
+/**
+ * Retourne l'id d'un fokontany existant (nom + district, insensible à la casse)
+ * ou en crée un nouveau. Appelé à la soumission de l'onboarding quand
+ * l'utilisateur a saisi un fokontany qui n'existait pas encore.
+ */
+export async function upsertFokontany(input: UpsertFokontanyInput): Promise<string> {
+  const name = input.name.trim();
+  const district = input.district.trim();
+
+  if (!name || !district) {
+    throw new Error("Le nom et le district du fokontany sont requis.");
+  }
+
+  const supabase = await createClient();
+
+  const { data: existing, error: searchError } = await supabase
+    .from("fokontany")
+    .select("id")
+    .ilike("name", name)
+    .ilike("district", district)
+    .limit(1)
+    .maybeSingle();
+
+  if (searchError) {
+    throw new Error(`Recherche fokontany échouée: ${searchError.message}`);
+  }
+  if (existing) return existing.id;
+
+  const { data: created, error: insertError } = await supabase
+    .from("fokontany")
+    .insert({ name, district, lat: input.lat, lng: input.lng })
+    .select("id")
+    .single();
+
+  if (insertError || !created) {
+    throw new Error(`Création fokontany échouée: ${insertError?.message ?? "inconnue"}`);
+  }
+  return created.id;
 }

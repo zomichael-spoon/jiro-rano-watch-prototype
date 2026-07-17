@@ -18,6 +18,7 @@ export type UserRole = "citizen" | "provider" | "admin";
 // TABLES — correspondance 1:1 avec le schéma SQL
 // ---------------------------------------------------------------------------
 
+// Le fokontany est maintenant une entité DB (Supabase), plus une simple option statique
 export interface Fokontany {
   id: string; // uuid
   name: string;
@@ -26,6 +27,13 @@ export interface Fokontany {
   lng: number;
   created_at: string; // ISO timestamp
 }
+
+// Ce que le combobox manipule avant soumission :
+// - soit un fokontany déjà en base (id connu)
+// - soit un nouveau fokontany saisi (pas encore d'id → sera créé au submit)
+export type FokontanySelection =
+  | { kind: "existing"; fokontany: Fokontany }
+  | { kind: "new"; name: string; district: string; lat: number; lng: number };
 
 export interface DisruptionType {
   id: string;

@@ -1,13 +1,19 @@
+<<<<<<< HEAD
 import {
   Zap, Droplets, AlertTriangle, Fuel, CheckCircle2, Globe, MapPin, type LucideIcon,
 } from "lucide-react";
 import type { DisruptionType, DisruptionCode, ProfileWithRelations } from "@/types";
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+=======
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+>>>>>>> fix
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+<<<<<<< HEAD
 
 
 // ============================================================================
@@ -68,3 +74,5 @@ export function isProfileComplete(profile: ProfileWithRelations | null): boolean
   if (!profile) return false;
   return !!(profile.display_name && profile.activity_code && profile.fokontany_id && profile.ville);
 }
+=======
+>>>>>>> fix
