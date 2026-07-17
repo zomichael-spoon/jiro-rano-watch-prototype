@@ -187,11 +187,6 @@ export default function HomeScreen({
 
   return (
     <div className="flex items-center justify-center h-dvh flex-col bg-background overflow-hidden">
-  
-  {/* 2. FIX: Removed h-dvh, replaced with flex-1 and min-h-0 so it fits nicely alongside the nav */}
-  <div className="flex flex-1 min-h-0 w-full max-w-2xl flex-col overflow-hidden bg-background border-b border-border">
-    
-    {/* The status bar border-b will now render perfectly in-bounds */}
     <StatusBar 
       reports={reports} 
       profile={{
@@ -201,8 +196,7 @@ export default function HomeScreen({
     />
     
     <main className="flex-1 overflow-y-auto flex flex-col justify-start items-center overscroll-contain min-h-0">
-      {/* 3. FIX: Changed h-dvh here to w-full flex-1 so child screens don't overflow their bounds */}
-      <div className="flex flex-1 w-full flex-col overflow-hidden bg-background">
+      <div className="flex flex-1 w-full max-w-2xl flex-col overflow-hidden bg-background">
         {tab === "map" && (<MapScreen reports={reports} disruptionTypes={disruptionTypes} onConfirm={handleConfirm} />)}
         {tab === "feed" && <FeedScreen reports={reports} onUpvote={handleConfirm} />}
         {tab === "report" && (
@@ -245,7 +239,6 @@ export default function HomeScreen({
         )}
       </div>
     </main>
-  </div>
 
       {/* Bottom nav — mobile-first, 6 zones tactiles larges */}
       <nav className="w-full max-w-2xl flex items-center justify-between border-t border-border bg-card px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">

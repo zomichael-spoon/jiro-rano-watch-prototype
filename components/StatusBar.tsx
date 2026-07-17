@@ -26,10 +26,11 @@ export default function StatusBar({ profile, reports }: Props) {
   }, []);
 
   return (
-    <header className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-border bg-background/95 backdrop-blur-sm z-20">
+    <header className="w-full flex items-center justify-between px-4 pt-3 pb-2 border-b border-border bg-background/95 backdrop-blur-sm z-20">
       {/* Left: App name + role */}
+      <div className="w-full max-w-5xl flex items-center justify-between gap-2 mx-auto">
       <div className="flex items-center gap-2">
-        <div>
+        <div className="flex flex-col items-center gap-2">
           <span className="text-[13px] font-bold text-foreground tracking-tight">JiroRano</span>
           <span
             className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase ${
@@ -74,6 +75,7 @@ export default function StatusBar({ profile, reports }: Props) {
             {activeCount}
           </span>
         )}
+      </div>
       </div>
     </header>
   );
