@@ -2,6 +2,10 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import PwaInstaller from '@/components/PwaInstaller'
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: 'JiroRano Watch — Water & Power Watch Madagascar',
@@ -47,7 +51,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="fr" className="bg-background">
+    <html lang="fr" className={cn("bg-background", "font-sans", geist.variable)}>
       <head>
         {/* iOS PWA meta */}
         <meta name="mobile-web-app-capable" content="yes" />

@@ -108,7 +108,7 @@ export function FokontanyCombobox({ value, onChange }: Props) {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+      <PopoverTrigger>
         <button
           type="button"
           role="combobox"

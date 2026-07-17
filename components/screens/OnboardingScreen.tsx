@@ -2,17 +2,18 @@
 
 import { useState } from "react";
 import { User, Briefcase, ShieldCheck, Droplets, Zap, Loader2 } from "lucide-react";
-import type { Activity, UserRole, UpsertProfileDTO, FokontanySelection } from "@/types";
+import type { Activity, UserRole, UpsertProfileDTO, FokontanySelection, FokontanyOption } from "@/types";
 import { FokontanyCombobox } from "@/components/FokontanyCombobox";
 import { upsertFokontany } from "@/lib/actions";
 
 interface Props {
   activities: Activity[];
+  fokontanyOptions: FokontanyOption[];
   onComplete: (dto: UpsertProfileDTO) => void;
   userId: string;
 }
 
-export default function OnboardingScreen({ activities, onComplete, userId }: Props) {
+export default function OnboardingScreen({ activities, fokontanyOptions, onComplete, userId }: Props) {
   const [name, setName] = useState("");
   const [role, setRole] = useState<UserRole>("citizen");
   const [activityCode, setActivityCode] = useState(activities[0]?.code ?? "");
