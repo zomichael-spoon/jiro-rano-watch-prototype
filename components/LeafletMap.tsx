@@ -117,23 +117,29 @@ export default function LeafletMap({ reports, onMarkerClick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef       = useRef<L.Map | null>(null);
 
-  // 1. CHANGE: Use state instead of a ref for the layer group
   const [mapLayer, setMapLayer] = useState<L.LayerGroup | null>(null);
-
   const [center, setCenter] = useState<L.LatLngTuple>(TANA_CENTER);
-  const [located, setLocated] = useState(false);
+  
+  // "mapReady" represents when we are ready to build the map (coordinates resolved or fallback used)
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     getCurrentCoordinates(10000)
       .then((coords) => {
         setCenter([coords.latitude, coords.longitude]);
-        setLocated(true);
+        setMapReady(true);
+      })
+      .catch((error) => {
+        console.warn("Geolocation failed or was denied. Falling back to Tana center:", error.message);
+        // We do not change 'center' because it is already initialized to TANA_CENTER
+        setMapReady(true); 
       });
   }, []);
 
   // ── Initialize map once ──────────────────────────────────────────────────
   useEffect(() => {
-    if (!containerRef.current || mapRef.current || !located) return;
+    // CHANGE: We now check "mapReady" instead of "located"
+    if (!containerRef.current || mapRef.current || !mapReady) return;
 
     const map = L.map(containerRef.current, {
       center: center,
@@ -157,21 +163,18 @@ export default function LeafletMap({ reports, onMarkerClick }: Props) {
 
     mapRef.current = map;
 
-    // 2. CHANGE: Create the layer group and save it to state
     const layerGroup = L.layerGroup().addTo(map);
     setMapLayer(layerGroup);
 
     return () => {
       map.remove();
       mapRef.current = null;
-      setMapLayer(null); // Clean up state
+      setMapLayer(null);
     };
-  }, [located, center]);
+  }, [mapReady, center]); // CHANGE: Depend on mapReady instead of located
 
   // ── Sync markers when reports OR mapLayer change ──────────────────────────
   useEffect(() => {
-    // 3. CHANGE: We now depend on mapLayer (state), which guarantees this fires
-    // the exact moment the map layer is created!
     if (!mapLayer) return;
 
     mapLayer.clearLayers();
@@ -182,9 +185,8 @@ export default function LeafletMap({ reports, onMarkerClick }: Props) {
       marker.on("click", () => onMarkerClick(report));
       marker.addTo(mapLayer);
     });
-
-    // Clean dependency array containing no refs
   }, [reports, onMarkerClick, mapLayer]);
+
   return (
     <div
       ref={containerRef}
