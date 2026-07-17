@@ -118,7 +118,7 @@ export default function PwaInstaller() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <>
+    <div className="z-50">
       {/* ── Install Banner ─────────────────────────────────────────────── */}
       {showInstallBanner && !isInstalled && (
         <div
@@ -126,9 +126,9 @@ export default function PwaInstaller() {
           aria-label="Installer l'application"
           className="fixed bottom-20 left-3 right-3 z-50 animate-in slide-in-from-bottom-4 duration-300"
         >
-          <div className="relative flex items-center gap-3 rounded-2xl border border-amber-500/30 bg-[#0f111a]/95 backdrop-blur-xl px-4 py-3 shadow-2xl shadow-amber-500/10 z-50">
+          <div className="relative flex items-center gap-3 rounded-2xl border border-amber-500/30 bg-card-background backdrop-blur-xl px-4 py-3 shadow-2xl shadow-amber-500/10 z-50">
             {/* Glow */}
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-amber-500/5 via-transparent to-blue-500/5 pointer-events-none" />
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-card-background via-transparent to-primary/5 pointer-events-none" />
 
             <div className="flex-shrink-0 h-10 w-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg">
               <Smartphone className="h-5 w-5 text-white" />
@@ -166,16 +166,14 @@ export default function PwaInstaller() {
         <div
           role="dialog"
           aria-label="Activer les notifications"
-          className="fixed bottom-20 left-3 right-3 z-50 animate-in slide-in-from-bottom-4 duration-300"
+          className="fixed bottom-20 left-3 right-3 z-50 animate-in slide-in-from-bottom-4 duration-300 bg-card-background"
           style={{ bottom: showInstallBanner ? "9rem" : undefined }}
         >
-          <div className="relative flex items-center gap-3 rounded-2xl border border-blue-500/30 bg-[#0f111a]/95 backdrop-blur-xl px-4 py-3 shadow-2xl shadow-blue-500/10 z-50">
+          <div className="relative flex items-center justify-center gap-3 rounded-2xl border border-blue-500/30 bg-card-background px-4 py-3 shadow-2xl shadow-blue-500/10 z-50">
             {/* Glow */}
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
+            <div className="absolute inset-0 rounded-2xl pointer-events-none" />
 
-            <div className="flex-shrink-0 h-10 w-10 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center shadow-lg">
-              <Bell className="h-5 w-5 text-white" />
-            </div>
+            <Bell className="h-5 w-5 text-primary" />
 
             <div className="flex-1 min-w-0">
               <p className="text-[13px] font-bold text-foreground">Alertes de panne</p>
@@ -216,6 +214,6 @@ export default function PwaInstaller() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
